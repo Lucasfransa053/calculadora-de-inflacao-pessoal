@@ -16,9 +16,7 @@ cd backend
 
 # Executar a aplicação
 .\mvnw.cmd spring-boot:run  # Windows
-
-
-
+```
 
 # 📊 Calculadora de Inflação Pessoal
 
