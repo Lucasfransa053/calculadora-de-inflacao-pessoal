@@ -1,8 +1,11 @@
 package br.com.backend.config;
 
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,12 +17,23 @@ public class AppConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-        RequestConfig requestConfig = RequestConfig.custom()
+        // Configura o timeout de conexao via ConnectionConfig
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
                 .setConnectTimeout(Timeout.ofSeconds(5))
+                .build();
+
+        // Aplica a configuracao de conexao no ConnectionManager
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultConnectionConfig(connectionConfig)
+                .build();
+
+        // Configura o Response Timeout na requisicao
+        RequestConfig requestConfig = RequestConfig.custom()
                 .setResponseTimeout(Timeout.ofSeconds(5))
                 .build();
 
         CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
                 .setDefaultRequestConfig(requestConfig)
                 .build();
 
