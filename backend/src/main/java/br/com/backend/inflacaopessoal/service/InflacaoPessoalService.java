@@ -15,9 +15,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set; // <--- IMPORT ADICIONADO AQUI
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,8 +29,8 @@ public class InflacaoPessoalService {
     private final HistoricoCategoriaIpcaRepository historicoRepository;
 
     public InflacaoPessoalService(IbgeClient ibgeClient, 
-                                 CategoriaIpcaRepository categoriaRepository, 
-                                 HistoricoCategoriaIpcaRepository historicoRepository) {
+                                  CategoriaIpcaRepository categoriaRepository, 
+                                  HistoricoCategoriaIpcaRepository historicoRepository) {
         this.ibgeClient = ibgeClient;
         this.categoriaRepository = categoriaRepository;
         this.historicoRepository = historicoRepository;
@@ -37,7 +38,6 @@ public class InflacaoPessoalService {
 
     @Transactional
     public String sincronizarUltimoMesIbge() {
-        // Reutiliza o metodo generico passando "-1"
         return sincronizarPeriodo("-1");
     }
 
@@ -49,7 +49,6 @@ public class InflacaoPessoalService {
             return "Nenhum dado retornado da API do IBGE para o período informado.";
         }
 
-        // 1. Carrega todas as categorias e históricos existentes na memória de uma vez só (evita queries N+1)
         Set<String> categoriasExistentes = categoriaRepository.findAll()
                 .stream()
                 .map(CategoriaIpcaEntity::getId)
@@ -66,34 +65,30 @@ public class InflacaoPessoalService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
         for (IbgeGrupoDTO dto : grupos) {
-            // Valida se a categoria já está no banco ou se foi adicionada nesta mesma execução
             if (!categoriasExistentes.contains(dto.id())) {
                 CategoriaIpcaEntity novaCategoria = new CategoriaIpcaEntity(dto.id(), dto.nome());
                 novasCategoriasEntities.add(novaCategoria);
-                categoriasExistentes.add(dto.id()); // Marca na memória
+                categoriasExistentes.add(dto.id());
             }
 
             LocalDate dataReferencia = LocalDate.parse(dto.periodo() + "01", formatter);
             String chaveHistorico = dto.id() + "_" + dataReferencia;
 
-            // Valida histórico na memória
             if (!historicosExistentes.contains(chaveHistorico)) {
                 try {
                     BigDecimal valor = new BigDecimal(dto.valor().replace(",", "."));
                     
-                    // Instancia o objeto categoria temporário sem precisar fazer query no banco
                     CategoriaIpcaEntity categoriaRef = new CategoriaIpcaEntity();
                     categoriaRef.setId(dto.id());
 
                     novosHistoricosEntities.add(new HistoricoCategoriaIpcaEntity(categoriaRef, dataReferencia, valor));
-                    historicosExistentes.add(chaveHistorico); // Marca na memória
+                    historicosExistentes.add(chaveHistorico);
                 } catch (NumberFormatException e) {
-                    // Trata caracteres como "..." da API
+                    // Trata valores não numéricos ("...")
                 }
             }
         }
 
-        // 2. Persiste tudo em pouquíssimos lotes com saveAll
         if (!novasCategoriasEntities.isEmpty()) {
             categoriaRepository.saveAll(novasCategoriasEntities);
         }
@@ -106,46 +101,50 @@ public class InflacaoPessoalService {
                 novasCategoriasEntities.size(), novosHistoricosEntities.size());
     }
 
+    @Transactional
     public CalculoInflacaoResponseDTO calcularInflacaoPessoal(CalculoInflacaoRequestDTO request) {
         LocalDate inicio = request.dataInicio().withDayOfMonth(1);
         LocalDate fim = request.dataFim().withDayOfMonth(1);
 
-        // 1. Busca histórico do período selecionado
+        // 1. Verifica no banco se o período completo está disponível. Se faltar mês, sincroniza na hora.
+        garantirSincronizacaoDoPeriodo(inicio, fim);
+
+        // 2. Busca histórico do período
         List<HistoricoCategoriaIpcaEntity> historicos = historicoRepository.findByDataReferenciaBetween(inicio, fim);
 
         if (historicos.isEmpty()) {
-            throw new IllegalArgumentException("Não há dados de IPCA persistidos para o período solicitado.");
+            throw new IllegalArgumentException("Não há dados de IPCA disponíveis para o período solicitado, mesmo após sincronização.");
         }
 
-        // Identifica as datas reais encontradas na base
         LocalDate menorDataEncontrada = historicos.stream().map(HistoricoCategoriaIpcaEntity::getDataReferencia).min(LocalDate::compareTo).orElse(inicio);
         LocalDate maiorDataEncontrada = historicos.stream().map(HistoricoCategoriaIpcaEntity::getDataReferencia).max(LocalDate::compareTo).orElse(fim);
 
         String aviso = null;
         if (maiorDataEncontrada.isBefore(fim)) {
-            aviso = String.format("O IPCA para datas após %s ainda não foi publicado pelo IBGE. O cálculo considerou de %s até %s.",
-                    maiorDataEncontrada, menorDataEncontrada, maiorDataEncontrada);
+            DateTimeFormatter fmtAnos = DateTimeFormatter.ofPattern("MM/yyyy");
+            aviso = String.format("O IPCA para datas após %s ainda não foi publicado pelo IBGE. O cálculo considerou o intervalo publicado de %s a %s.",
+                    maiorDataEncontrada.format(fmtAnos), menorDataEncontrada.format(fmtAnos), maiorDataEncontrada.format(fmtAnos));
         }
 
-        // 2. Total do orçamento do usuário
-        BigDecimal gastoTotal = request.itensGasto().stream()
+        // 3. Total gasto
+        BigDecimal gastoTotalInicial = request.itensGasto().stream()
                 .map(CalculoInflacaoRequestDTO.ItemGastoDTO::valorGasto)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (gastoTotal.compareTo(BigDecimal.ZERO) <= 0) {
+        if (gastoTotalInicial.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("O valor total de gastos deve ser maior que zero.");
         }
 
         List<CalculoInflacaoResponseDTO.DetalhamentoCategoriaDTO> detalhamento = new ArrayList<>();
         BigDecimal inflacaoPessoalPonderadaSum = BigDecimal.ZERO;
+        BigDecimal gastoTotalRecompostoSum = BigDecimal.ZERO;
 
-        // 3. Calcula a inflação acumulada por categoria
+        // 4. Cálculo por categoria
         for (CalculoInflacaoRequestDTO.ItemGastoDTO item : request.itensGasto()) {
             List<HistoricoCategoriaIpcaEntity> historicosCategoria = historicos.stream()
                     .filter(h -> h.getCategoria().getId().equals(item.categoriaId()))
                     .toList();
 
-            // Fator acumulado via juros compostos: (1 + i1) * (1 + i2) * ...
             double fatorAcumulado = 1.0;
             for (HistoricoCategoriaIpcaEntity h : historicosCategoria) {
                 double taxaDecimal = h.getValorPercentual().doubleValue() / 100.0;
@@ -156,16 +155,22 @@ public class InflacaoPessoalService {
                     .setScale(4, RoundingMode.HALF_UP);
 
             BigDecimal pesoPercentual = item.valorGasto()
-                    .divide(gastoTotal, 4, RoundingMode.HALF_UP)
+                    .divide(gastoTotalInicial, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
 
-            // Ponderação no total
-            BigDecimal contribuiçãoInflacao = inflacaoAcumuladaCategoria
-                    .multiply(item.valorGasto().divide(gastoTotal, 6, RoundingMode.HALF_UP));
+            BigDecimal contribuicaoInflacao = inflacaoAcumuladaCategoria
+                    .multiply(item.valorGasto().divide(gastoTotalInicial, 6, RoundingMode.HALF_UP));
             
-            inflacaoPessoalPonderadaSum = inflacaoPessoalPonderadaSum.add(contribuiçãoInflacao);
+            inflacaoPessoalPonderadaSum = inflacaoPessoalPonderadaSum.add(contribuicaoInflacao);
 
-            // Busca o nome a partir da lista já carregada no relacionamento do histórico
+            // Recomposição do valor gasto dessa categoria específica
+            BigDecimal valorRecompostoCategoria = item.valorGasto()
+                    .multiply(BigDecimal.valueOf(fatorAcumulado))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal impactoFinanceiroCategoria = valorRecompostoCategoria.subtract(item.valorGasto());
+            gastoTotalRecompostoSum = gastoTotalRecompostoSum.add(valorRecompostoCategoria);
+
             String nomeCategoria = historicosCategoria.stream()
                     .map(h -> h.getCategoria().getNome())
                     .findFirst()
@@ -175,22 +180,49 @@ public class InflacaoPessoalService {
                     item.categoriaId(),
                     nomeCategoria,
                     item.valorGasto(),
+                    valorRecompostoCategoria,
+                    impactoFinanceiroCategoria,
                     pesoPercentual.setScale(2, RoundingMode.HALF_UP),
                     inflacaoAcumuladaCategoria.setScale(2, RoundingMode.HALF_UP)
             ));
         }
 
-        // 4. Calcula também o IPCA Geral do período para efeito de comparação (Categoria ID "7169" = Índice geral)
+        // 5. Métricas Gerais
         BigDecimal ipcaGeralAcumulado = calcularIpcaAcumuladoCategoria("7169", historicos);
+        BigDecimal inflacaoPessoalFinal = inflacaoPessoalPonderadaSum.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal diferencaIpca = inflacaoPessoalFinal.subtract(ipcaGeralAcumulado);
+        BigDecimal perdaPoderCompraReais = gastoTotalRecompostoSum.subtract(gastoTotalInicial);
 
         return new CalculoInflacaoResponseDTO(
-                inflacaoPessoalPonderadaSum.setScale(2, RoundingMode.HALF_UP),
+                inflacaoPessoalFinal,
                 ipcaGeralAcumulado,
+                diferencaIpca,
+                gastoTotalInicial.setScale(2, RoundingMode.HALF_UP),
+                gastoTotalRecompostoSum.setScale(2, RoundingMode.HALF_UP),
+                perdaPoderCompraReais.setScale(2, RoundingMode.HALF_UP),
                 menorDataEncontrada,
                 maiorDataEncontrada,
                 aviso,
                 detalhamento
         );
+    }
+
+    private void garantirSincronizacaoDoPeriodo(LocalDate inicio, LocalDate fim) {
+        // Conta quantos meses deveriam existir no intervalo
+        long mesesEsperados = ChronoUnit.MONTHS.between(inicio, fim) + 1;
+        
+        // Categoria 7169 (Índice Geral) como referência
+        List<HistoricoCategoriaIpcaEntity> historicos7169 = historicoRepository.findByDataReferenciaBetween(inicio, fim)
+                .stream()
+                .filter(h -> h.getCategoria().getId().equals("7169"))
+                .toList();
+
+        // Se o número de meses no banco for menor do que o esperado para o intervalo, força a sincronização
+        if (historicos7169.size() < mesesEsperados) {
+            DateTimeFormatter fmtIbge = DateTimeFormatter.ofPattern("yyyyMM");
+            String periodoParam = inicio.format(fmtIbge) + "-" + fim.format(fmtIbge);
+            sincronizarPeriodo(periodoParam);
+        }
     }
 
     private BigDecimal calcularIpcaAcumuladoCategoria(String categoriaId, List<HistoricoCategoriaIpcaEntity> historicos) {
