@@ -21,8 +21,8 @@ const HOST = Platform.select({
 });
 
 // Troque pelo IP da sua máquina se for testar em um celular físico via Expo Go,
-// ex: export const API_BASE_URL = 'http://192.168.0.10:8080/api';
-export const API_BASE_URL = `http://192.168.0.2:8080/api`;
+// ex: export const API_BASE_URL = 'http://seu_ip_local:8080/api';
+export const API_BASE_URL = `http://seu_ip_local:8080/api`;
 
 export async function buscarHistoricoIpca(): Promise<IpcaPonto[]> {
   const response = await fetch(`${API_BASE_URL}/ipca/historico`);
