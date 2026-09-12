@@ -33,11 +33,30 @@ public class IpcaService {
     }
 
     @Transactional(readOnly = true)
+    public HistoricoIpcaEntity buscarUltimoIpcaDisponivel() {
+        return ipcaRepository.findTopByOrderByDataReferenciaDesc()
+                .orElseThrow(() -> new RuntimeException("Nenhum registro de IPCA encontrado no banco de dados."));
+    }
+
+    @Transactional(readOnly = true)
     public CorrecaoResponseDTO calcularCorrecao(CorrecaoRequestDTO request) {
         LocalDate inicio = request.dataInicio().atDay(1);
         LocalDate fim = request.dataFim().atDay(1);
 
+        // Validação: Garante que a data final solicitada não ultrapassa o último IPCA disponível
+        HistoricoIpcaEntity ultimoIpca = buscarUltimoIpcaDisponivel();
+        if (fim.isAfter(ultimoIpca.getDataReferencia())) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/yyyy");
+            throw new IllegalArgumentException(
+                "A data final (" + fim.format(fmt) + ") é superior ao último IPCA disponível no sistema (" + ultimoIpca.getDataReferencia().format(fmt) + ")."
+            );
+        }
+
         List<HistoricoIpcaEntity> taxas = ipcaRepository.findByDataReferenciaBetweenOrderByDataReferenciaAsc(inicio, fim);
+
+        if (taxas.isEmpty()) {
+            throw new IllegalArgumentException("Nenhuma taxa de IPCA encontrada para o período informado.");
+        }
 
         BigDecimal fatorAcumulado = BigDecimal.ONE;
 
