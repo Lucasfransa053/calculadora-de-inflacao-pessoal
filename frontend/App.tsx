@@ -157,15 +157,6 @@ export default function App() {
               Inflação Pessoal
             </Text>
           </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.sidebarSectionTitle}>EM BREVE</Text>
-
-          <TouchableOpacity style={[styles.navItem, styles.navItemDisabled]} disabled>
-            <Text style={styles.navIcon}>📈</Text>
-            <Text style={styles.navLabelDisabled}>Projeções IPCA-E</Text>
-          </TouchableOpacity>
         </Animated.View>
 
         {/* Área de Conteúdo */}
@@ -209,7 +200,7 @@ const styles = StyleSheet.create({
   hamburgerIcon: {
     width: 18,
     height: 14,
-    justifyContent: 'space-between', // CORRIGIDO: de 'justify' para 'justifyContent'
+    justifyContent: 'space-between',
   },
   hamburgerLine: {
     width: '100%',
@@ -286,9 +277,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderColor: '#38BDF8',
   },
-  navItemDisabled: {
-    opacity: 0.4,
-  },
   navIcon: {
     fontSize: 16,
     marginRight: 12,
@@ -301,15 +289,6 @@ const styles = StyleSheet.create({
   navLabelAtivo: {
     color: '#F8FAFC',
     fontWeight: '700',
-  },
-  navLabelDisabled: {
-    color: '#64748B',
-    fontSize: 14,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#334155',
-    marginVertical: 12,
   },
   conteudo: {
     flex: 1,
