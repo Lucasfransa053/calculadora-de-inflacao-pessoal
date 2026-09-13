@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  Pressable,
+  ActivityIndicator,
+  Modal,
+  FlatList,
+  StyleSheet,
 } from 'react-native';
 import {
   buscarCategoriasIpca,
@@ -17,26 +19,41 @@ import {
   CalculoInflacaoResponseDTO,
 } from '../services/api';
 
-const getIconeCategoria = (nome: string) => {
-  const lower = nome.toLowerCase();
-  if (lower.includes('alimentaç')) return '🍔';
-  if (lower.includes('habitaç')) return '🏠';
-  if (lower.includes('residência') || lower.includes('residencia')) return '🛋️';
-  if (lower.includes('vestuário') || lower.includes('vestuario')) return '👕';
-  if (lower.includes('transporte')) return '🚗';
-  if (lower.includes('saúde') || lower.includes('saude')) return '🏥';
-  if (lower.includes('despesas pessoais')) return '🪒';
-  if (lower.includes('educaç')) return '🎓';
-  if (lower.includes('comunicaç')) return '📱';
-  return '📦';
+// Grupos Principais
+interface GrupoUI {
+  id: string;
+  nome: string;
+  icone: string;
+  keywords: string[]; // Usado para agrupar corretamente os itens sem falhas de código
+}
+
+const GRUPOS_PRINCIPAIS: GrupoUI[] = [
+  { id: '1', nome: 'Alimentação e Bebidas', icone: '🍔', keywords: ['alimentac', 'arroz', 'feijao', 'carne', 'picanha', 'leite', 'biscoito', 'fruta', 'maca', 'banana', 'morango', 'peixe', 'acucar', 'refrigerante', 'suco', 'macarrao'] },
+  { id: '2', nome: 'Habitação & Limpeza', icone: '🏠', keywords: ['habitac', 'aluguel', 'energia', 'agua', 'gas', 'detergente', 'limpeza', 'sabao', 'condominio'] },
+  { id: '3', nome: 'Artigos de Residência', icone: '🛋️', keywords: ['residencia', 'eletrodomestico', 'móvel', 'tv', 'cama', 'utensilio'] },
+  { id: '4', nome: 'Vestuário', icone: '👕', keywords: ['vestuario', 'roupa', 'calca', 'camisa', 'sapato', 'tenis', 'calcado'] },
+  { id: '5', nome: 'Transportes', icone: '🚗', keywords: ['transporte', 'gasolina', 'etanol', 'combustivel', 'passagem', 'onibus', 'metro', 'uber', 'veiculo', 'pneu'] },
+  { id: '6', nome: 'Saúde & Cuidados', icone: '🏥', keywords: ['saude', 'remedio', 'medicamento', 'medico', 'plano', 'hospital', 'farmacia', 'higiene', 'perfume', 'shampoo'] },
+  { id: '7', nome: 'Despesas Pessoais', icone: '🪒', keywords: ['despesas pessoais', 'barbeiro', 'cabeleireiro', 'recreacao', 'cinema', 'viagem', 'hotel'] },
+  { id: '8', nome: 'Educação', icone: '🎓', keywords: ['educac', 'escola', 'faculdade', 'curso', 'mensalidade', 'livro', 'material escolar'] },
+  { id: '9', nome: 'Comunicação', icone: '📱', keywords: ['comunicac', 'internet', 'telefone', 'celular', 'tv por assinatura', 'streaming'] },
+];
+
+const formatarNomeCategoria = (nome: string) => {
+  return nome.replace(/^[0-9]+\.\s*/, '');
+};
+
+const removerAcentos = (texto: string) => {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 };
 
 export default function InflacaoPessoalScreen() {
   const [categorias, setCategorias] = useState<CategoriaIpca[]>([]);
   const [cestaGasto, setCestaGasto] = useState<{ categoriaId: string; nome: string; valor: string }[]>([]);
   
-  // Controles do Form e Modal Select
-  const [modalVisivel, setModalVisivel] = useState(false);
+  // Modal e Grupo Selecionado
+  const [grupoAtivoModal, setGrupoAtivoModal] = useState<GrupoUI | null>(null);
+  const [buscaCategoria, setBuscaCategoria] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<CategoriaIpca | null>(null);
   const [valorInput, setValorInput] = useState('');
 
@@ -62,7 +79,6 @@ export default function InflacaoPessoalScreen() {
     try {
       const lista = await buscarCategoriasIpca();
       if (lista && lista.length > 0) {
-        // Exclui o índice geral ('7169') se vier na lista
         setCategorias(lista.filter(c => c.id !== '7169'));
       } else {
         setCategorias([]);
@@ -76,10 +92,38 @@ export default function InflacaoPessoalScreen() {
     }
   };
 
+  // Cálculo do Total da Cesta em Tempo Real (Saldo Acumulado)
+  const totalCesta = useMemo(() => {
+    return cestaGasto.reduce((acc, item) => {
+      const val = parseFloat(item.valor.replace(',', '.')) || 0;
+      return acc + val;
+    }, 0);
+  }, [cestaGasto]);
+
+  // Filtra as categorias estritamente atreladas ao Grupo Aberto no Modal
+  const categoriasDoGrupoFiltradas = useMemo(() => {
+    if (!grupoAtivoModal) return [];
+
+    const termoBusca = removerAcentos(buscaCategoria);
+
+    return categorias.filter(cat => {
+      const nomeLimpo = removerAcentos(formatarNomeCategoria(cat.nome));
+      
+      // Checa se o ID da categoria começa com o ID do grupo OU se bate com as keywords do grupo
+      const pertenceAoGrupo = 
+        cat.id.startsWith(grupoAtivoModal.id) ||
+        grupoAtivoModal.keywords.some(kw => nomeLimpo.includes(kw));
+
+      const bateuBusca = !termoBusca || nomeLimpo.includes(termoBusca);
+
+      return pertenceAoGrupo && bateuBusca;
+    });
+  }, [buscaCategoria, grupoAtivoModal, categorias]);
+
   const handleAdicionarItemCesta = () => {
     setErro(null);
     if (!categoriaSelecionada) {
-      setErro('Por favor, selecione uma categoria.');
+      setErro('Por favor, selecione um item no grupo.');
       return;
     }
     const valorNumerico = parseFloat(valorInput.replace(',', '.'));
@@ -89,16 +133,19 @@ export default function InflacaoPessoalScreen() {
     }
 
     if (cestaGasto.some(item => item.categoriaId === categoriaSelecionada.id)) {
-      setErro('Categoria já adicionada na sua cesta.');
+      setErro('Item já adicionado na sua cesta.');
       return;
     }
 
     setCestaGasto([
       ...cestaGasto,
-      { categoriaId: categoriaSelecionada.id, nome: categoriaSelecionada.nome, valor: valorInput }
+      { 
+        categoriaId: categoriaSelecionada.id, 
+        nome: formatarNomeCategoria(categoriaSelecionada.nome), 
+        valor: valorInput 
+      }
     ]);
     
-    // Reseta os campos após adicionar
     setCategoriaSelecionada(null);
     setValorInput('');
   };
@@ -112,7 +159,7 @@ export default function InflacaoPessoalScreen() {
     setResultado(null);
 
     if (cestaGasto.length === 0) {
-      setErro('Adicione pelo menos uma categoria à sua cesta de consumo.');
+      setErro('Adicione pelo menos um item à sua cesta de consumo.');
       return;
     }
 
@@ -127,7 +174,6 @@ export default function InflacaoPessoalScreen() {
         valorGasto: parseFloat(item.valor.replace(',', '.')) || 0,
       }));
 
-      // Chamada para o backend via service api.ts
       const res = await calcularInflacaoPessoal({
         dataInicio,
         dataFim,
@@ -147,7 +193,7 @@ export default function InflacaoPessoalScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.titulo}>Minha Inflação Pessoal</Text>
         <Text style={styles.subtitulo}>
-          Calcule o impacto real da inflação no seu bolso montando sua própria cesta de consumo.
+          Monte sua cesta de consumo navegando pelos grupos abaixo e acompanhe o total acumulado.
         </Text>
 
         {loading ? (
@@ -175,45 +221,79 @@ export default function InflacaoPessoalScreen() {
 
             <View style={styles.divisor} />
 
-            {/* Inserção de Categoria (O "Select") */}
-            <Text style={styles.cardTitulo}>Adicionar Gasto Mensal</Text>
-            <View style={styles.formRow}>
-              <TouchableOpacity style={styles.selectBtn} onPress={() => setModalVisivel(true)}>
-                <Text style={categoriaSelecionada ? styles.selectBtnTextAtivo : styles.selectBtnTextPlaceholder} numberOfLines={1}>
-                  {categoriaSelecionada ? `${getIconeCategoria(categoriaSelecionada.nome)} ${categoriaSelecionada.nome}` : 'Selecione uma categoria...'}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.inputGastoWrapper}>
-                <Text style={styles.prefixoMoeda}>R$</Text>
-                <TextInput
-                  style={styles.inputGasto}
-                  keyboardType="numeric"
-                  placeholder="0,00"
-                  placeholderTextColor="#64748B"
-                  value={valorInput}
-                  onChangeText={setValorInput}
-                />
-              </View>
+            {/* SELEÇÃO POR GRUPOS DA TELA PRINCIPAL */}
+            <Text style={styles.cardTitulo}>1. Escolha um Grupo de Gastos</Text>
+            <View style={styles.gridGrupos}>
+              {GRUPOS_PRINCIPAIS.map(grupo => (
+                <TouchableOpacity
+                  key={grupo.id}
+                  style={styles.botaoGrupoGrid}
+                  onPress={() => {
+                    setGrupoAtivoModal(grupo);
+                    setBuscaCategoria('');
+                  }}
+                >
+                  <Text style={styles.iconeGrupoGrid}>{grupo.icone}</Text>
+                  <Text style={styles.nomeGrupoGrid} numberOfLines={2}>{grupo.nome}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <TouchableOpacity style={styles.btnAdicionar} onPress={handleAdicionarItemCesta}>
-              <Text style={styles.btnAdicionarTexto}>+ Adicionar à Cesta</Text>
-            </TouchableOpacity>
+
+            {/* ITEM SELECIONADO E INSERÇÃO DE VALOR */}
+            {categoriaSelecionada && (
+              <View style={styles.boxInsercaoValor}>
+                <Text style={styles.itemSelecionadoLabel}>Item Escolhido:</Text>
+                <Text style={styles.itemSelecionadoNome}>
+                  {formatarNomeCategoria(categoriaSelecionada.nome)}
+                </Text>
+                
+                <View style={styles.rowAdicionarValor}>
+                  <View style={styles.inputGastoWrapper}>
+                    <Text style={styles.prefixoMoeda}>R$</Text>
+                    <TextInput
+                      style={styles.inputGasto}
+                      keyboardType="numeric"
+                      placeholder="0,00"
+                      placeholderTextColor="#64748B"
+                      value={valorInput}
+                      onChangeText={setValorInput}
+                      autoFocus
+                    />
+                  </View>
+                  <TouchableOpacity style={styles.btnAdicionar} onPress={handleAdicionarItemCesta}>
+                    <Text style={styles.btnAdicionarTexto}>+ Confirmar Item</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             <View style={styles.divisor} />
 
-            {/* Cesta de Consumo do Usuário */}
-            <Text style={styles.cardTitulo}>Sua Cesta de Consumo</Text>
+            {/* CESTA E SALDO ACUMULADO */}
+            <View style={styles.headerCestaRow}>
+              <Text style={styles.cardTitulo}>2. Sua Cesta de Consumo</Text>
+              
+              {/* CARD DE TOTALIZADOR / SALDO ACUMULADO */}
+              <View style={styles.badgeTotalCesta}>
+                <Text style={styles.badgeTotalLabel}>Total na Cesta:</Text>
+                <Text style={styles.badgeTotalValor}>
+                  R$ {totalCesta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </Text>
+              </View>
+            </View>
+
             {cestaGasto.length === 0 ? (
-              <Text style={styles.cestaVaziaTexto}>Nenhum item adicionado ainda.</Text>
+              <Text style={styles.cestaVaziaTexto}>Nenhum item adicionado ainda. Escolha um grupo acima.</Text>
             ) : (
               <View style={styles.listaCesta}>
                 {cestaGasto.map(item => (
                   <View key={item.categoriaId} style={styles.cestaItem}>
-                    <Text style={styles.cestaItemNome}>{getIconeCategoria(item.nome)} {item.nome}</Text>
-                    <Text style={styles.cestaItemValor}>R$ {item.valor}</Text>
+                    <Text style={styles.cestaItemNome}>📦 {item.nome}</Text>
+                    <Text style={styles.cestaItemValor}>
+                      R$ {parseFloat(item.valor.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </Text>
                     <TouchableOpacity style={styles.btnRemover} onPress={() => handleRemoverItemCesta(item.categoriaId)}>
-                      <Text style={styles.btnRemoverTexto}>X</Text>
+                      <Text style={styles.btnRemoverTexto}>✕</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -222,7 +302,11 @@ export default function InflacaoPessoalScreen() {
 
             {erro && <Text style={styles.textoErro}>{erro}</Text>}
 
-            <TouchableOpacity style={[styles.botaoAcao, cestaGasto.length === 0 && { opacity: 0.5 }]} onPress={handleCalcular} disabled={calculando || cestaGasto.length === 0}>
+            <TouchableOpacity 
+              style={[styles.botaoAcao, cestaGasto.length === 0 && { opacity: 0.5 }]} 
+              onPress={handleCalcular} 
+              disabled={calculando || cestaGasto.length === 0}
+            >
               {calculando ? (
                 <ActivityIndicator color="#0F172A" />
               ) : (
@@ -232,7 +316,7 @@ export default function InflacaoPessoalScreen() {
           </View>
         )}
 
-        {/* Dashboard de Resultados */}
+        {/* DASHBOARD DE RESULTADOS */}
         {resultado && (
           <View style={styles.cardResultado}>
             <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>
@@ -283,18 +367,25 @@ export default function InflacaoPessoalScreen() {
               </Text>
             </View>
 
+            {/* DETALHAMENTO COM HOVER */}
             {resultado.detalhamento && resultado.detalhamento.length > 0 && (
               <View style={{ marginTop: 16 }}>
                 <Text style={styles.subtituloDetalhamento}>Detalhamento da Cesta:</Text>
                 {resultado.detalhamento.map(item => (
-                  <View key={item.categoriaId} style={styles.linhaDetalhamento}>
+                  <Pressable
+                    key={item.categoriaId}
+                    style={({ hovered }: { hovered?: boolean }) => [
+                      styles.linhaDetalhamento,
+                      hovered && styles.linhaDetalhamentoHover,
+                    ]}
+                  >
                     <Text style={styles.nomeDetalhamento} numberOfLines={1}>
-                      {getIconeCategoria(item.nomeCategoria)} {item.nomeCategoria}
+                      📦 {formatarNomeCategoria(item.nomeCategoria)}
                     </Text>
                     <Text style={styles.valorDetalhamento}>
                       {item.inflacaoAcumuladaCategoriaPercentual.toFixed(2)}%
                     </Text>
-                  </View>
+                  </Pressable>
                 ))}
               </View>
             )}
@@ -302,27 +393,57 @@ export default function InflacaoPessoalScreen() {
         )}
       </ScrollView>
 
-      {/* Modal / Select Customizado para Categorias */}
-      <Modal visible={modalVisivel} transparent animationType="fade">
+      {/* MODAL EXCLUSIVO DO GRUPO SELECIONADO */}
+      <Modal visible={!!grupoAtivoModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Selecione uma Categoria</Text>
-            <ScrollView style={styles.modalList}>
-              {categorias.map(cat => (
+            <Text style={styles.modalTitle}>
+              {grupoAtivoModal?.icone} {grupoAtivoModal?.nome}
+            </Text>
+            
+            <TextInput
+              style={styles.inputBuscaModal}
+              placeholder={`Buscar dentro de ${grupoAtivoModal?.nome}...`}
+              placeholderTextColor="#64748B"
+              value={buscaCategoria}
+              onChangeText={setBuscaCategoria}
+              autoFocus
+            />
+
+            <FlatList
+              data={categoriasDoGrupoFiltradas}
+              keyExtractor={(item) => item.id}
+              initialNumToRender={15}
+              maxToRenderPerBatch={20}
+              windowSize={10}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  key={cat.id}
                   style={styles.modalItem}
                   onPress={() => {
-                    setCategoriaSelecionada(cat);
-                    setModalVisivel(false);
+                    setCategoriaSelecionada(item);
+                    setGrupoAtivoModal(null);
+                    setBuscaCategoria('');
                   }}
                 >
-                  <Text style={styles.modalItemText}>{getIconeCategoria(cat.nome)} {cat.nome}</Text>
+                  <Text style={styles.modalItemText}>
+                    {formatarNomeCategoria(item.nome)}
+                  </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalVisivel(false)}>
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.textoVazioModal}>Nenhum item encontrado neste grupo.</Text>
+              }
+              style={styles.modalList}
+            />
+
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => {
+                setGrupoAtivoModal(null);
+                setBuscaCategoria('');
+              }}
+            >
+              <Text style={styles.modalCloseText}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -350,21 +471,30 @@ const styles = StyleSheet.create({
   ateTexto: { color: '#64748B', fontSize: 12 },
   
   divisor: { height: 1, backgroundColor: '#334155', marginVertical: 16 },
-  
-  // Select Customizado
-  formRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  selectBtn: { flex: 1, backgroundColor: '#0F172A', paddingHorizontal: 12, justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
-  selectBtnTextPlaceholder: { color: '#64748B', fontSize: 13 },
-  selectBtnTextAtivo: { color: '#F8FAFC', fontSize: 13, fontWeight: '500' },
-  
-  inputGastoWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
+
+  // GRID DE GRUPOS
+  gridGrupos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  botaoGrupoGrid: { width: '31%', backgroundColor: '#0F172A', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
+  iconeGrupoGrid: { fontSize: 22, marginBottom: 4 },
+  nomeGrupoGrid: { color: '#E2E8F0', fontSize: 11, textAlign: 'center', fontWeight: '500' },
+
+  // BOX DE INSERÇÃO DE VALOR
+  boxInsercaoValor: { backgroundColor: '#0F172A', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#38BDF8', marginTop: 8 },
+  itemSelecionadoLabel: { color: '#38BDF8', fontSize: 11, fontWeight: '600' },
+  itemSelecionadoNome: { color: '#F8FAFC', fontSize: 14, fontWeight: '700', marginBottom: 10 },
+  rowAdicionarValor: { flexDirection: 'row', gap: 10 },
+  inputGastoWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
   prefixoMoeda: { color: '#64748B', fontSize: 12, marginRight: 4 },
-  inputGasto: { color: '#F8FAFC', fontSize: 14, fontWeight: '600', width: 75, paddingVertical: 10, textAlign: 'right' },
-  
-  btnAdicionar: { backgroundColor: '#334155', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  btnAdicionarTexto: { color: '#F8FAFC', fontSize: 13, fontWeight: '600' },
-  
-  // Lista de Itens (Cesta)
+  inputGasto: { flex: 1, color: '#F8FAFC', fontSize: 14, fontWeight: '600', paddingVertical: 8 },
+  btnAdicionar: { backgroundColor: '#38BDF8', paddingHorizontal: 16, justifyContent: 'center', borderRadius: 8 },
+  btnAdicionarTexto: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
+
+  // HEADER CESTA E TOTALIZADOR DE SALDO
+  headerCestaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  badgeTotalCesta: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#38BDF8', flexDirection: 'row', gap: 6, alignItems: 'center' },
+  badgeTotalLabel: { color: '#94A3B8', fontSize: 11 },
+  badgeTotalValor: { color: '#38BDF8', fontSize: 13, fontWeight: '800' },
+
   cestaVaziaTexto: { color: '#64748B', fontSize: 13, fontStyle: 'italic', marginBottom: 16 },
   listaCesta: { gap: 8, marginBottom: 16 },
   cestaItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
@@ -377,7 +507,6 @@ const styles = StyleSheet.create({
   botaoAcao: { backgroundColor: '#38BDF8', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
   botaoTextoAcao: { color: '#0F172A', fontWeight: '700', fontSize: 15 },
   
-  // Dashboard de Resultados
   cardResultado: { backgroundColor: '#1E293B', borderRadius: 16, padding: 20, marginTop: 20, borderWidth: 1, borderColor: '#38BDF8' },
   cardTituloResultado: { fontSize: 18, fontWeight: '700', color: '#F8FAFC', marginBottom: 12 },
   avisoTexto: { color: '#F59E0B', fontSize: 12, marginBottom: 12 },
@@ -391,17 +520,20 @@ const styles = StyleSheet.create({
   textoResumoValor: { color: '#F8FAFC', fontSize: 13, fontWeight: '600' },
   textoResumoValorDestaque: { color: '#38BDF8', fontSize: 14, fontWeight: '700' },
   subtituloDetalhamento: { color: '#F8FAFC', fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 4 },
-  linhaDetalhamento: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  linhaDetalhamento: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 8, borderRadius: 6 },
+  linhaDetalhamentoHover: { backgroundColor: '#0F172A' },
   nomeDetalhamento: { color: '#94A3B8', fontSize: 12, flex: 1, marginRight: 8 },
   valorDetalhamento: { color: '#38BDF8', fontSize: 12, fontWeight: '600' },
   
-  // Estilos do Modal (Select)
+  // MODAL EXCLUSIVO
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.85)', justifyContent: 'center', padding: 20 },
   modalContainer: { backgroundColor: '#1E293B', borderRadius: 12, padding: 20, maxHeight: '80%', borderWidth: 1, borderColor: '#334155' },
-  modalTitle: { color: '#F8FAFC', fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  modalList: { marginBottom: 16 },
-  modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#334155' },
-  modalItemText: { color: '#E2E8F0', fontSize: 15 },
+  modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
+  inputBuscaModal: { backgroundColor: '#0F172A', color: '#F8FAFC', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#38BDF8', marginBottom: 12, fontSize: 14 },
+  modalList: { marginBottom: 12 },
+  modalItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' },
+  modalItemText: { color: '#E2E8F0', fontSize: 14 },
+  textoVazioModal: { color: '#64748B', textAlign: 'center', marginTop: 20, fontStyle: 'italic' },
   modalCloseBtn: { alignItems: 'center', paddingVertical: 12, backgroundColor: '#334155', borderRadius: 8 },
   modalCloseText: { color: '#F8FAFC', fontWeight: '600' },
 });
