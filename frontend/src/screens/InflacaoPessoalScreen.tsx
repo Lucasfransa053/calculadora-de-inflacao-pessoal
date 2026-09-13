@@ -17,19 +17,6 @@ import {
   CalculoInflacaoResponseDTO,
 } from '../services/api';
 
-// Fallback de contingência caso o backend Spring Boot esteja fora do ar
-const CATEGORIAS_FALLBACK: CategoriaIpca[] = [
-  { id: '1', nome: 'Alimentação e bebidas' },
-  { id: '2', nome: 'Habitação' },
-  { id: '3', nome: 'Artigos de residência' },
-  { id: '4', nome: 'Vestuário' },
-  { id: '5', nome: 'Transportes' },
-  { id: '6', nome: 'Saúde e cuidados pessoais' },
-  { id: '7', nome: 'Despesas pessoais' },
-  { id: '8', nome: 'Educação' },
-  { id: '9', nome: 'Comunicação' },
-];
-
 const getIconeCategoria = (nome: string) => {
   const lower = nome.toLowerCase();
   if (lower.includes('alimentaç')) return '🍔';
@@ -71,16 +58,19 @@ export default function InflacaoPessoalScreen() {
 
   const carregarCategorias = async () => {
     setLoading(true);
+    setErro(null);
     try {
       const lista = await buscarCategoriasIpca();
       if (lista && lista.length > 0) {
-        setCategorias(lista.filter(c => c.id !== '7169')); // Exclui índice geral se houver
+        // Exclui o índice geral ('7169') se vier na lista
+        setCategorias(lista.filter(c => c.id !== '7169'));
       } else {
-        setCategorias(CATEGORIAS_FALLBACK);
+        setCategorias([]);
       }
-    } catch (e) {
-      console.warn("Backend indisponível, usando categorias de fallback.");
-      setCategorias(CATEGORIAS_FALLBACK);
+    } catch (e: any) {
+      console.warn("Erro ao buscar categorias do backend:", e);
+      setErro('Não foi possível carregar as categorias do servidor.');
+      setCategorias([]);
     } finally {
       setLoading(false);
     }
@@ -242,7 +232,7 @@ export default function InflacaoPessoalScreen() {
           </View>
         )}
 
-        {/* Dashboard de Resultados (Mesmo código que você tinha, garantido) */}
+        {/* Dashboard de Resultados */}
         {resultado && (
           <View style={styles.cardResultado}>
             <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>

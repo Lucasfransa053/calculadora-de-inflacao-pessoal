@@ -3,6 +3,7 @@ package br.com.backend.inflacaopessoal.service;
 import br.com.backend.inflacaopessoal.client.IbgeClient;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoRequestDTO;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoResponseDTO;
+import br.com.backend.inflacaopessoal.dto.CategoriaDTO;
 import br.com.backend.inflacaopessoal.dto.IbgeGrupoDTO;
 import br.com.backend.inflacaopessoal.entity.CategoriaIpcaEntity;
 import br.com.backend.inflacaopessoal.entity.HistoricoCategoriaIpcaEntity;
@@ -237,7 +238,9 @@ public class InflacaoPessoalService {
         return BigDecimal.valueOf((fator - 1.0) * 100.0).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public List<CategoriaIpcaEntity> listarCategorias() {
-        return categoriaRepository.findAll();
+    public List<CategoriaDTO> listarCategorias() {
+        return categoriaRepository.findAll().stream()
+                .map(c -> new CategoriaDTO(c.getId(), c.getNome()))
+                .toList();
     }
 }

@@ -2,6 +2,7 @@ package br.com.backend.inflacaopessoal.controller;
 
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoRequestDTO;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoResponseDTO;
+import br.com.backend.inflacaopessoal.dto.CategoriaDTO;
 import br.com.backend.inflacaopessoal.entity.CategoriaIpcaEntity;
 import br.com.backend.inflacaopessoal.service.InflacaoPessoalService;
 
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/api/inflacao-pessoal")
 public class InflacaoPessoalController {
 
@@ -33,8 +35,9 @@ public class InflacaoPessoalController {
     }
 
     @GetMapping("/categorias")
-    public List<CategoriaIpcaEntity> getCategorias() {
-        return inflacaoPessoalService.listarCategorias();
+    public ResponseEntity<List<CategoriaDTO>> getCategorias() {
+        List<CategoriaDTO> categorias = inflacaoPessoalService.listarCategorias();
+        return ResponseEntity.ok(categorias);
     }
 
     @PostMapping("/calcular")
