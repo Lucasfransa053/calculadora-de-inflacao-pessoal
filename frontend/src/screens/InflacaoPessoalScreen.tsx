@@ -19,51 +19,119 @@ import {
   CalculoInflacaoResponseDTO,
 } from '../services/api';
 
-// Grupos Principais
 interface GrupoUI {
   id: string;
   nome: string;
   icone: string;
-  keywords: string[]; // Usado para agrupar corretamente os itens sem falhas de código
+  match: (nomeLimpo: string, id: string) => boolean;
 }
-
-const GRUPOS_PRINCIPAIS: GrupoUI[] = [
-  { id: '1', nome: 'Alimentação e Bebidas', icone: '🍔', keywords: ['alimentac', 'arroz', 'feijao', 'carne', 'picanha', 'leite', 'biscoito', 'fruta', 'maca', 'banana', 'morango', 'peixe', 'acucar', 'refrigerante', 'suco', 'macarrao'] },
-  { id: '2', nome: 'Habitação & Limpeza', icone: '🏠', keywords: ['habitac', 'aluguel', 'energia', 'agua', 'gas', 'detergente', 'limpeza', 'sabao', 'condominio'] },
-  { id: '3', nome: 'Artigos de Residência', icone: '🛋️', keywords: ['residencia', 'eletrodomestico', 'móvel', 'tv', 'cama', 'utensilio'] },
-  { id: '4', nome: 'Vestuário', icone: '👕', keywords: ['vestuario', 'roupa', 'calca', 'camisa', 'sapato', 'tenis', 'calcado'] },
-  { id: '5', nome: 'Transportes', icone: '🚗', keywords: ['transporte', 'gasolina', 'etanol', 'combustivel', 'passagem', 'onibus', 'metro', 'uber', 'veiculo', 'pneu'] },
-  { id: '6', nome: 'Saúde & Cuidados', icone: '🏥', keywords: ['saude', 'remedio', 'medicamento', 'medico', 'plano', 'hospital', 'farmacia', 'higiene', 'perfume', 'shampoo'] },
-  { id: '7', nome: 'Despesas Pessoais', icone: '🪒', keywords: ['despesas pessoais', 'barbeiro', 'cabeleireiro', 'recreacao', 'cinema', 'viagem', 'hotel'] },
-  { id: '8', nome: 'Educação', icone: '🎓', keywords: ['educac', 'escola', 'faculdade', 'curso', 'mensalidade', 'livro', 'material escolar'] },
-  { id: '9', nome: 'Comunicação', icone: '📱', keywords: ['comunicac', 'internet', 'telefone', 'celular', 'tv por assinatura', 'streaming'] },
-];
-
-const formatarNomeCategoria = (nome: string) => {
-  return nome.replace(/^[0-9]+\.\s*/, '');
-};
 
 const removerAcentos = (texto: string) => {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 };
 
+const formatarNomeCategoria = (nome: string) => {
+  return nome.replace(/^[0-9]+\.\s*/, '');
+};
+
+const GRUPOS_PRINCIPAIS: GrupoUI[] = [
+  {
+    id: '1',
+    nome: 'Alimentação e Bebidas',
+    icone: '🍔',
+    match: (n) => 
+      (n.includes('alimentac') || n.includes('arroz') || n.includes('feijao') || n.includes('carne') || 
+       n.includes('picanha') || n.includes('leite') || n.includes('biscoito') || n.includes('fruta') || 
+       n.includes('maca') || n.includes('banana') || n.includes('morango') || n.includes('peixe') || 
+       n.includes('acucar') || n.includes('refrigerante') || n.includes('suco') || n.includes('macarrao') ||
+       n.includes('pao') || n.includes('cerveja') || n.includes('queijo') || n.includes('oleo') || n.includes('cafe')) &&
+      !n.includes('combustivel')
+  },
+  {
+    id: '2',
+    nome: 'Habitação & Limpeza',
+    icone: '🏠',
+    match: (n) => 
+      (n.includes('habitac') || n.includes('aluguel') || n.includes('energia eletrica') || 
+       n.includes('taxa de agua') || n.includes('gas encanado') || n.includes('gas de botijao') || 
+       n.includes('detergente') || n.includes('limpeza') || n.includes('sabao') || n.includes('condominio')) &&
+      !n.includes('gasolina')
+  },
+  {
+    id: '3',
+    nome: 'Artigos de Residência',
+    icone: '🛋️',
+    match: (n) => 
+      n.includes('residencia') || n.includes('eletrodomestico') || n.includes('movel') || 
+      n.includes('tv') || n.includes('cama') || n.includes('utensilio') || n.includes('colchao') || n.includes('geladeira')
+  },
+  {
+    id: '4',
+    nome: 'Vestuário',
+    icone: '👕',
+    match: (n) => 
+      n.includes('vestuario') || n.includes('roupa') || n.includes('calca') || n.includes('camisa') || 
+      n.includes('sapato') || n.includes('tenis') || n.includes('calcado') || n.includes('saia') || n.includes('cinto')
+  },
+  {
+    id: '5',
+    nome: 'Transportes',
+    icone: '🚗',
+    match: (n) => 
+      n.includes('transporte') || n.includes('gasolina') || n.includes('etanol') || n.includes('combustivel') || 
+      n.includes('passagem') || n.includes('onibus') || n.includes('metro') || n.includes('uber') || 
+      n.includes('veiculo') || n.includes('pneu') || n.includes('estacionamento') || n.includes('pedagio')
+  },
+  {
+    id: '6',
+    nome: 'Saúde & Cuidados',
+    icone: '🏥',
+    match: (n) => 
+      n.includes('saude') || n.includes('remedio') || n.includes('medicamento') || n.includes('medico') || 
+      n.includes('plano de saude') || n.includes('hospital') || n.includes('farmacia') || n.includes('higiene') || 
+      n.includes('perfume') || n.includes('shampoo') || n.includes('dentista') || n.includes('oculos')
+  },
+  {
+    id: '7',
+    nome: 'Despesas Pessoais',
+    icone: '🪒',
+    match: (n) => 
+      n.includes('despesas pessoais') || n.includes('barbeiro') || n.includes('cabeleireiro') || 
+      n.includes('recreacao') || n.includes('cinema') || n.includes('viagem') || n.includes('hotel') || 
+      n.includes('cigarro') || n.includes('pet') || n.includes('veterinario')
+  },
+  {
+    id: '8',
+    nome: 'Educação',
+    icone: '🎓',
+    match: (n) => 
+      n.includes('educac') || n.includes('escola') || n.includes('faculdade') || n.includes('curso') || 
+      n.includes('mensalidade') || n.includes('livro') || n.includes('material escolar') || n.includes('idiomas')
+  },
+  {
+    id: '9',
+    nome: 'Comunicação',
+    icone: '📱',
+    match: (n) => 
+      n.includes('comunicac') || n.includes('internet') || n.includes('telefone') || n.includes('celular') || 
+      n.includes('tv por assinatura') || n.includes('streaming') || n.includes('correio')
+  },
+];
+
 export default function InflacaoPessoalScreen() {
   const [categorias, setCategorias] = useState<CategoriaIpca[]>([]);
   const [cestaGasto, setCestaGasto] = useState<{ categoriaId: string; nome: string; valor: string }[]>([]);
   
-  // Modal e Grupo Selecionado
   const [grupoAtivoModal, setGrupoAtivoModal] = useState<GrupoUI | null>(null);
   const [buscaCategoria, setBuscaCategoria] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<CategoriaIpca | null>(null);
   const [valorInput, setValorInput] = useState('');
 
-  // Períodos
   const [mesInicio, setMesInicio] = useState('01');
   const [anoInicio, setAnoInicio] = useState('2025');
   const [mesFim, setMesFim] = useState('07');
   const [anoFim, setAnoFim] = useState('2026');
 
-  // Estados de Loading e Resultados
   const [loading, setLoading] = useState(true);
   const [calculando, setCalculando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -92,7 +160,6 @@ export default function InflacaoPessoalScreen() {
     }
   };
 
-  // Cálculo do Total da Cesta em Tempo Real (Saldo Acumulado)
   const totalCesta = useMemo(() => {
     return cestaGasto.reduce((acc, item) => {
       const val = parseFloat(item.valor.replace(',', '.')) || 0;
@@ -100,7 +167,6 @@ export default function InflacaoPessoalScreen() {
     }, 0);
   }, [cestaGasto]);
 
-  // Filtra as categorias estritamente atreladas ao Grupo Aberto no Modal
   const categoriasDoGrupoFiltradas = useMemo(() => {
     if (!grupoAtivoModal) return [];
 
@@ -108,12 +174,7 @@ export default function InflacaoPessoalScreen() {
 
     return categorias.filter(cat => {
       const nomeLimpo = removerAcentos(formatarNomeCategoria(cat.nome));
-      
-      // Checa se o ID da categoria começa com o ID do grupo OU se bate com as keywords do grupo
-      const pertenceAoGrupo = 
-        cat.id.startsWith(grupoAtivoModal.id) ||
-        grupoAtivoModal.keywords.some(kw => nomeLimpo.includes(kw));
-
+      const pertenceAoGrupo = grupoAtivoModal.match(nomeLimpo, cat.id);
       const bateuBusca = !termoBusca || nomeLimpo.includes(termoBusca);
 
       return pertenceAoGrupo && bateuBusca;
@@ -201,7 +262,6 @@ export default function InflacaoPessoalScreen() {
         ) : (
           <View style={styles.cardPrincipal}>
             
-            {/* Período */}
             <View style={styles.periodoContainer}>
               <Text style={styles.labelPeriodo}>Período de Análise:</Text>
               <View style={styles.datasRow}>
@@ -221,7 +281,6 @@ export default function InflacaoPessoalScreen() {
 
             <View style={styles.divisor} />
 
-            {/* SELEÇÃO POR GRUPOS DA TELA PRINCIPAL */}
             <Text style={styles.cardTitulo}>1. Escolha um Grupo de Gastos</Text>
             <View style={styles.gridGrupos}>
               {GRUPOS_PRINCIPAIS.map(grupo => (
@@ -239,7 +298,6 @@ export default function InflacaoPessoalScreen() {
               ))}
             </View>
 
-            {/* ITEM SELECIONADO E INSERÇÃO DE VALOR */}
             {categoriaSelecionada && (
               <View style={styles.boxInsercaoValor}>
                 <Text style={styles.itemSelecionadoLabel}>Item Escolhido:</Text>
@@ -269,11 +327,9 @@ export default function InflacaoPessoalScreen() {
 
             <View style={styles.divisor} />
 
-            {/* CESTA E SALDO ACUMULADO */}
             <View style={styles.headerCestaRow}>
               <Text style={styles.cardTitulo}>2. Sua Cesta de Consumo</Text>
               
-              {/* CARD DE TOTALIZADOR / SALDO ACUMULADO */}
               <View style={styles.badgeTotalCesta}>
                 <Text style={styles.badgeTotalLabel}>Total na Cesta:</Text>
                 <Text style={styles.badgeTotalValor}>
@@ -316,7 +372,6 @@ export default function InflacaoPessoalScreen() {
           </View>
         )}
 
-        {/* DASHBOARD DE RESULTADOS */}
         {resultado && (
           <View style={styles.cardResultado}>
             <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>
@@ -367,7 +422,6 @@ export default function InflacaoPessoalScreen() {
               </Text>
             </View>
 
-            {/* DETALHAMENTO COM HOVER */}
             {resultado.detalhamento && resultado.detalhamento.length > 0 && (
               <View style={{ marginTop: 16 }}>
                 <Text style={styles.subtituloDetalhamento}>Detalhamento da Cesta:</Text>
@@ -393,7 +447,6 @@ export default function InflacaoPessoalScreen() {
         )}
       </ScrollView>
 
-      {/* MODAL EXCLUSIVO DO GRUPO SELECIONADO */}
       <Modal visible={!!grupoAtivoModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
@@ -403,7 +456,7 @@ export default function InflacaoPessoalScreen() {
             
             <TextInput
               style={styles.inputBuscaModal}
-              placeholder={`Buscar dentro de ${grupoAtivoModal?.nome}...`}
+              placeholder={`Buscar em ${grupoAtivoModal?.nome}...`}
               placeholderTextColor="#64748B"
               value={buscaCategoria}
               onChangeText={setBuscaCategoria}
@@ -472,13 +525,11 @@ const styles = StyleSheet.create({
   
   divisor: { height: 1, backgroundColor: '#334155', marginVertical: 16 },
 
-  // GRID DE GRUPOS
   gridGrupos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   botaoGrupoGrid: { width: '31%', backgroundColor: '#0F172A', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
   iconeGrupoGrid: { fontSize: 22, marginBottom: 4 },
   nomeGrupoGrid: { color: '#E2E8F0', fontSize: 11, textAlign: 'center', fontWeight: '500' },
 
-  // BOX DE INSERÇÃO DE VALOR
   boxInsercaoValor: { backgroundColor: '#0F172A', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#38BDF8', marginTop: 8 },
   itemSelecionadoLabel: { color: '#38BDF8', fontSize: 11, fontWeight: '600' },
   itemSelecionadoNome: { color: '#F8FAFC', fontSize: 14, fontWeight: '700', marginBottom: 10 },
@@ -489,7 +540,6 @@ const styles = StyleSheet.create({
   btnAdicionar: { backgroundColor: '#38BDF8', paddingHorizontal: 16, justifyContent: 'center', borderRadius: 8 },
   btnAdicionarTexto: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
 
-  // HEADER CESTA E TOTALIZADOR DE SALDO
   headerCestaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   badgeTotalCesta: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#38BDF8', flexDirection: 'row', gap: 6, alignItems: 'center' },
   badgeTotalLabel: { color: '#94A3B8', fontSize: 11 },
@@ -525,7 +575,6 @@ const styles = StyleSheet.create({
   nomeDetalhamento: { color: '#94A3B8', fontSize: 12, flex: 1, marginRight: 8 },
   valorDetalhamento: { color: '#38BDF8', fontSize: 12, fontWeight: '600' },
   
-  // MODAL EXCLUSIVO
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.85)', justifyContent: 'center', padding: 20 },
   modalContainer: { backgroundColor: '#1E293B', borderRadius: 12, padding: 20, maxHeight: '80%', borderWidth: 1, borderColor: '#334155' },
   modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' },

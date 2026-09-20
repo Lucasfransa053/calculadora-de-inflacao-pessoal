@@ -1,10 +1,22 @@
 import { Platform } from 'react-native';
 
-export const API_BASE_URL = 'http://localhost:8080/api';
+// Trata a URL dependendo da plataforma (Web, Android Emulator ou iOS/Dispositivo)
+const getBaseUrl = () => {
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8080/api'; // IP especial para o Emulador Android acessar o Host
+  }
+  return 'http://localhost:8080/api'; // Para Web, iOS Simulator
+};
+
+export const API_BASE_URL = getBaseUrl();
+
+// ==========================================
+// INTERFACES (DTOs)
+// ==========================================
 
 export interface CorrecaoRequestDTO {
   valorInicial: number;
-  dataInicio: string; // Formato "YYYY-MM" para bater com o YearMonth do Spring
+  dataInicio: string; // Formato "YYYY-MM"
   dataFim: string;    // Formato "YYYY-MM"
 }
 
@@ -15,10 +27,14 @@ export interface CorrecaoResponseDTO {
   totalMeses: number;
 }
 
-// Interfaces para a Inflação Pessoal
 export interface CategoriaIpca {
   id: string;
   nome: string;
+}
+
+export interface FiltroCategoriaParams {
+  grupoId?: string;
+  termo?: string;
 }
 
 export interface ItemGastoDTO {
@@ -55,12 +71,14 @@ export interface CalculoInflacaoResponseDTO {
   detalhamento: DetalhamentoCategoriaDTO[];
 }
 
+// ==========================================
+// FUNÇÕES DE REQUISIÇÃO
+// ==========================================
+
 export async function calcularCorrecaoBackend(payload: CorrecaoRequestDTO): Promise<CorrecaoResponseDTO> {
   const response = await fetch(`${API_BASE_URL}/ipca/correcao-monetaria`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
@@ -69,7 +87,7 @@ export async function calcularCorrecaoBackend(payload: CorrecaoRequestDTO): Prom
     throw new Error(errorText || `Erro no servidor (status ${response.status})`);
   }
 
-  return await response.json();
+  return response.json();
 }
 
 export async function buscarUltimoIpca(): Promise<{ dataReferencia: string; valorPercentual: number }> {
@@ -80,16 +98,41 @@ export async function buscarUltimoIpca(): Promise<{ dataReferencia: string; valo
   return response.json();
 }
 
-// 1. Buscar Categorias do Banco
-export async function buscarCategoriasIpca(): Promise<CategoriaIpca[]> {
-  const response = await fetch(`${API_BASE_URL}/inflacao-pessoal/categorias`);
-  if (!response.ok) {
-    throw new Error('Falha ao buscar categorias do IPCA.');
+export const buscarCategoriasIpca = async (params?: FiltroCategoriaParams): Promise<CategoriaIpca[]> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.grupoId) {
+    queryParams.append('grupoId', params.grupoId);
   }
+  if (params?.termo) {
+    queryParams.append('termo', params.termo);
+  }
+
+  const url = `${API_BASE_URL}/inflacao-pessoal/categorias?${queryParams.toString()}`;
+
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Erro ao carregar categorias (${response.status})`);
+  }
+
+  return response.json();
+};
+
+export async function buscarCategoriasValidas(inicio: string, fim: string): Promise<CategoriaIpca[]> {
+  const url = `${API_BASE_URL}/inflacao-pessoal/categorias/validas?inicio=${inicio}&fim=${fim}`;
+
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Erro ao carregar categorias válidas (${response.status})`);
+  }
+
   return response.json();
 }
 
-// 2. Calcular Inflação Pessoal
 export async function calcularInflacaoPessoal(
   payload: CalculoInflacaoRequestDTO
 ): Promise<CalculoInflacaoResponseDTO> {
@@ -107,7 +150,6 @@ export async function calcularInflacaoPessoal(
   return response.json();
 }
 
-// 3. (Opcional) Forçar Carga de Dados via Frontend se o banco estiver vazio
 export async function sincronizarPeriodoIpca(periodo: string): Promise<string> {
   const response = await fetch(
     `${API_BASE_URL}/inflacao-pessoal/sincronizar-periodo?periodo=${periodo}`,
