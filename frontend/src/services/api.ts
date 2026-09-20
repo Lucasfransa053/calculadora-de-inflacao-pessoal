@@ -143,8 +143,9 @@ export async function calcularInflacaoPessoal(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Erro no cálculo (${response.status})`);
+    const errorData = await response.json().catch(() => null);
+    const errorMessage = errorData?.message || `Erro no cálculo (${response.status})`;
+    throw new Error(errorMessage);
   }
 
   return response.json();
