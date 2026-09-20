@@ -143,18 +143,14 @@ public class InflacaoPessoalService {
         LocalDate menorDataEncontrada = historicos.stream().map(HistoricoCategoriaIpcaEntity::getDataReferencia).min(LocalDate::compareTo).orElse(inicio);
         LocalDate maiorDataEncontrada = historicos.stream().map(HistoricoCategoriaIpcaEntity::getDataReferencia).max(LocalDate::compareTo).orElse(fim);
 
-        List<String> avisosItensIgnorados = new ArrayList<>();
         DateTimeFormatter fmtData = DateTimeFormatter.ofPattern("MM/yyyy");
-
-        if (maiorDataEncontrada.isBefore(fim)) {
-            avisosItensIgnorados.add(String.format("O IPCA para datas após %s ainda não foi publicado pelo IBGE.", maiorDataEncontrada.format(fmtData)));
-        }
 
         LocalDate dataFimEfetiva = maiorDataEncontrada.isBefore(fim) ? maiorDataEncontrada : fim;
         long mesesEsperados = ChronoUnit.MONTHS.between(inicio, dataFimEfetiva) + 1;
 
-        // FILTRAGEM: Separa itens válidos dos itens sem histórico completo no período
+        // 1. FILTRAGEM: Coleta itens válidos e guarda apenas os NOMES dos itens sem histórico completo
         List<CalculoInflacaoRequestDTO.ItemGastoDTO> itensValidos = new ArrayList<>();
+        List<String> nomesItensIgnorados = new ArrayList<>();
 
         for (CalculoInflacaoRequestDTO.ItemGastoDTO item : request.itensGasto()) {
             List<HistoricoCategoriaIpcaEntity> historicosCategoria = historicos.stream()
@@ -163,11 +159,13 @@ public class InflacaoPessoalService {
                     .toList();
 
             if (historicosCategoria.size() < mesesEsperados) {
-                String nomeCategoria = historicosCategoria.isEmpty()
+                String nomeBruto = historicosCategoria.isEmpty()
                         ? categoriaRepository.findById(item.categoriaId()).map(CategoriaIpcaEntity::getNome).orElse("ID " + item.categoriaId())
                         : historicosCategoria.get(0).getCategoria().getNome();
 
-                avisosItensIgnorados.add(String.format("O item '%s' foi desconsiderado por falta de dados no período.", nomeCategoria));
+                // Limpa o prefixo numérico (ex: "7101009.Cabeleireiro" -> "Cabeleireiro")
+                String nomeLimpo = nomeBruto.replaceFirst("^[0-9]+\\.\\s*", "");
+                nomesItensIgnorados.add(nomeLimpo);
             } else {
                 itensValidos.add(item);
             }
@@ -240,7 +238,19 @@ public class InflacaoPessoalService {
         BigDecimal diferencaIpca = inflacaoPessoalFinal.subtract(ipcaGeralAcumulado);
         BigDecimal perdaPoderCompraReais = gastoTotalRecompostoSum.subtract(gastoTotalInicial);
 
-        String mensagemAvisoFinal = avisosItensIgnorados.isEmpty() ? null : String.join(" ", avisosItensIgnorados);
+        // 2. MONTAGEM AGRUPADA DA MENSAGEM DE AVISO
+        List<String> frasesAviso = new ArrayList<>();
+
+        if (!nomesItensIgnorados.isEmpty()) {
+            String itensFormatados = String.join(", ", nomesItensIgnorados);
+            frasesAviso.add(String.format("Os seguintes itens foram desconsiderados por falta de dados no período: %s.", itensFormatados));
+        }
+
+        if (maiorDataEncontrada.isBefore(fim)) {
+            frasesAviso.add(String.format("O IPCA para datas após %s ainda não foi publicado pelo IBGE.", maiorDataEncontrada.format(fmtData)));
+        }
+
+        String mensagemAvisoFinal = frasesAviso.isEmpty() ? null : String.join(" ", frasesAviso);
 
         return new CalculoInflacaoResponseDTO(
                 inflacaoPessoalFinal,

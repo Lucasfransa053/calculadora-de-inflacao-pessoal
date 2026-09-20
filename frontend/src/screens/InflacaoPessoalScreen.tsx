@@ -181,6 +181,23 @@ export default function InflacaoPessoalScreen() {
     });
   }, [buscaCategoria, grupoAtivoModal, categorias]);
 
+  const itensAvisoDesconsiderados = useMemo(() => {
+    if (!resultado?.mensagemAviso) return { textoPrefixo: '', itens: [] };
+
+    const partes = resultado.mensagemAviso.split(':');
+    if (partes.length > 1) {
+      const prefixo = partes[0] + ':';
+      const listaItens = partes[1]
+        .split(',')
+        .map(i => i.trim().replace(/\.$/, ''))
+        .filter(Boolean);
+
+      return { textoPrefixo: prefixo, itens: listaItens };
+    }
+
+    return { textoPrefixo: resultado.mensagemAviso, itens: [] };
+  }, [resultado?.mensagemAviso]);
+
   const handleAdicionarItemCesta = () => {
     setErro(null);
     if (!categoriaSelecionada) {
@@ -375,9 +392,27 @@ export default function InflacaoPessoalScreen() {
         {resultado && (
           <View style={styles.cardResultado}>
             <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>
-            {resultado.mensagemAviso && (
-              <Text style={styles.avisoTexto}>{resultado.mensagemAviso}</Text>
+            
+            {resultado?.mensagemAviso && (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningIcon}>⚠️</Text>
+                <View style={styles.warningContent}>
+                  <Text style={styles.warningTextPrefix}>
+                    {itensAvisoDesconsiderados.textoPrefixo}
+                  </Text>
+                  {itensAvisoDesconsiderados.itens.length > 0 && (
+                    <View style={styles.warningBadgesRow}>
+                      {itensAvisoDesconsiderados.itens.map((item, idx) => (
+                        <View key={idx} style={styles.warningBadgeItem}>
+                          <Text style={styles.warningBadgeText}>{item}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
             )}
+
             <View style={styles.metricasGrid}>
               <View style={styles.metricaBox}>
                 <Text style={styles.metricaLabel}>Sua Inflação</Text>
@@ -510,10 +545,8 @@ const styles = StyleSheet.create({
   container: { padding: 20 },
   titulo: { fontSize: 22, fontWeight: '700', color: '#F8FAFC' },
   subtitulo: { fontSize: 13, color: '#94A3B8', marginTop: 4, marginBottom: 16 },
-  
   cardPrincipal: { backgroundColor: '#1E293B', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#334155' },
   cardTitulo: { fontSize: 15, fontWeight: '600', color: '#F8FAFC', marginBottom: 12 },
-  
   periodoContainer: { marginBottom: 8 },
   labelPeriodo: { color: '#94A3B8', fontSize: 12, fontWeight: '600', marginBottom: 8 },
   datasRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -522,14 +555,11 @@ const styles = StyleSheet.create({
   inputDataAno: { color: '#F8FAFC', paddingVertical: 6, width: 44, textAlign: 'center', fontWeight: '600' },
   barraData: { color: '#64748B', marginHorizontal: 2 },
   ateTexto: { color: '#64748B', fontSize: 12 },
-  
   divisor: { height: 1, backgroundColor: '#334155', marginVertical: 16 },
-
   gridGrupos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   botaoGrupoGrid: { width: '31%', backgroundColor: '#0F172A', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
   iconeGrupoGrid: { fontSize: 22, marginBottom: 4 },
   nomeGrupoGrid: { color: '#E2E8F0', fontSize: 11, textAlign: 'center', fontWeight: '500' },
-
   boxInsercaoValor: { backgroundColor: '#0F172A', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#38BDF8', marginTop: 8 },
   itemSelecionadoLabel: { color: '#38BDF8', fontSize: 11, fontWeight: '600' },
   itemSelecionadoNome: { color: '#F8FAFC', fontSize: 14, fontWeight: '700', marginBottom: 10 },
@@ -539,12 +569,10 @@ const styles = StyleSheet.create({
   inputGasto: { flex: 1, color: '#F8FAFC', fontSize: 14, fontWeight: '600', paddingVertical: 8 },
   btnAdicionar: { backgroundColor: '#38BDF8', paddingHorizontal: 16, justifyContent: 'center', borderRadius: 8 },
   btnAdicionarTexto: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
-
   headerCestaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   badgeTotalCesta: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#38BDF8', flexDirection: 'row', gap: 6, alignItems: 'center' },
   badgeTotalLabel: { color: '#94A3B8', fontSize: 11 },
   badgeTotalValor: { color: '#38BDF8', fontSize: 13, fontWeight: '800' },
-
   cestaVaziaTexto: { color: '#64748B', fontSize: 13, fontStyle: 'italic', marginBottom: 16 },
   listaCesta: { gap: 8, marginBottom: 16 },
   cestaItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
@@ -552,14 +580,18 @@ const styles = StyleSheet.create({
   cestaItemValor: { color: '#38BDF8', fontSize: 14, fontWeight: '600', marginRight: 12 },
   btnRemover: { backgroundColor: '#EF444420', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   btnRemoverTexto: { color: '#EF4444', fontWeight: 'bold' },
-
   textoErro: { color: '#EF4444', fontSize: 13, marginBottom: 12, textAlign: 'center' },
   botaoAcao: { backgroundColor: '#38BDF8', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
   botaoTextoAcao: { color: '#0F172A', fontWeight: '700', fontSize: 15 },
-  
   cardResultado: { backgroundColor: '#1E293B', borderRadius: 16, padding: 20, marginTop: 20, borderWidth: 1, borderColor: '#38BDF8' },
   cardTituloResultado: { fontSize: 18, fontWeight: '700', color: '#F8FAFC', marginBottom: 12 },
-  avisoTexto: { color: '#F59E0B', fontSize: 12, marginBottom: 12 },
+  warningCard: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#2A1F0D', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16 },
+  warningIcon: { marginRight: 10, fontSize: 18, marginTop: 2 },
+  warningContent: { flex: 1 },
+  warningTextPrefix: { color: '#FDE68A', fontSize: 13, fontWeight: '600', marginBottom: 8, lineHeight: 18 },
+  warningBadgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  warningBadgeItem: { backgroundColor: '#854D0E', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#F59E0B' },
+  warningBadgeText: { color: '#FEF08A', fontSize: 12, fontWeight: '700' },
   metricasGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 16 },
   metricaBox: { flex: 1, backgroundColor: '#0F172A', padding: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
   metricaLabel: { color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
@@ -574,7 +606,6 @@ const styles = StyleSheet.create({
   linhaDetalhamentoHover: { backgroundColor: '#0F172A' },
   nomeDetalhamento: { color: '#94A3B8', fontSize: 12, flex: 1, marginRight: 8 },
   valorDetalhamento: { color: '#38BDF8', fontSize: 12, fontWeight: '600' },
-  
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.85)', justifyContent: 'center', padding: 20 },
   modalContainer: { backgroundColor: '#1E293B', borderRadius: 12, padding: 20, maxHeight: '80%', borderWidth: 1, borderColor: '#334155' },
   modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
