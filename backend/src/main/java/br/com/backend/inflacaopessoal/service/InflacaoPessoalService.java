@@ -38,17 +38,21 @@ public class InflacaoPessoalService {
         this.historicoRepository = historicoRepository;
     }
 
-    @Transactional
     public String sincronizarUltimoMesIbge() {
         return sincronizarPeriodo("-1");
     }
 
-    @Transactional
+    // Removido o @Transactional geral do método para evitar prender a conexão do banco
+    // durante as chamadas de rede da API do IBGE
     public String sincronizarPeriodo(String periodo) {
-        List<IbgeGrupoDTO> grupos = new ArrayList<>();
+        int totalNovasCategorias = 0;
+        int totalNovosHistoricos = 0;
 
         if ("-1".equals(periodo)) {
-            grupos.addAll(ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo("7060", "-1"));
+            List<IbgeGrupoDTO> grupos = ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo("7060", "-1");
+            int[] resultado = salvarDadosSincronizados(grupos);
+            totalNovasCategorias += resultado[0];
+            totalNovosHistoricos += resultado[1];
         } else if (periodo.contains("-")) {
             String[] partes = periodo.split("-");
             int anoInicio = Integer.parseInt(partes[0].substring(0, 4));
@@ -63,16 +67,29 @@ public class InflacaoPessoalService {
                 String subPeriodo = String.format("%d%s-%d%s", ano, mStart, ano, mEnd);
                 String agregado = (ano <= 2019) ? "1419" : "7060";
 
-                grupos.addAll(ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo(agregado, subPeriodo));
+                List<IbgeGrupoDTO> gruposAno = ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo(agregado, subPeriodo);
+                int[] resultado = salvarDadosSincronizados(gruposAno);
+                totalNovasCategorias += resultado[0];
+                totalNovosHistoricos += resultado[1];
             }
         } else {
             int ano = Integer.parseInt(periodo.substring(0, 4));
             String agregado = (ano <= 2019) ? "1419" : "7060";
-            grupos.addAll(ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo(agregado, periodo));
+            List<IbgeGrupoDTO> grupos = ibgeClient.buscarGruposIpcaPorAgregadoEPeriodo(agregado, periodo);
+            int[] resultado = salvarDadosSincronizados(grupos);
+            totalNovasCategorias += resultado[0];
+            totalNovosHistoricos += resultado[1];
         }
 
-        if (grupos.isEmpty()) {
-            return "Nenhum dado retornado da API do IBGE para o período informado.";
+        return String.format("Sincronização concluída! %d novas categorias e %d taxas mensais persistidas.", 
+                totalNovasCategorias, totalNovosHistoricos);
+    }
+
+    // A transação agora é isolada apenas no momento da gravação dos dados no banco
+    @Transactional
+    public int[] salvarDadosSincronizados(List<IbgeGrupoDTO> grupos) {
+        if (grupos == null || grupos.isEmpty()) {
+            return new int[]{0, 0};
         }
 
         Set<String> categoriasExistentes = categoriaRepository.findAll()
@@ -123,8 +140,7 @@ public class InflacaoPessoalService {
             historicoRepository.saveAll(novosHistoricosEntities);
         }
 
-        return String.format("Sincronização concluída! %d novas categorias e %d taxas mensais persistidas.", 
-                novasCategoriasEntities.size(), novosHistoricosEntities.size());
+        return new int[]{novasCategoriasEntities.size(), novosHistoricosEntities.size()};
     }
 
     @Transactional(noRollbackFor = IllegalArgumentException.class)
