@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,9 +10,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, useTheme } from '../theme';
+import { PageHeader } from '../components/PageHeader';
+import { useIsDesktop } from '../hooks/useLayout';
 import { buscarUltimoIpca, calcularCorrecaoBackend, CorrecaoResponseDTO } from '../services/api';
 
 export default function CalculadoraIpcaScreen() {
+  const { colors } = useTheme();
+  const desktop = useIsDesktop();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [valor, setValor] = useState('');
   const [mesInicio, setMesInicio] = useState('');
   const [anoInicio, setAnoInicio] = useState('');
@@ -114,211 +121,292 @@ export default function CalculadoraIpcaScreen() {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.titulo}>Calculadora IPCA Geral</Text>
-          <Text style={styles.subtitulo}>
-            Calcula a correção monetária oficial acumulada no período.
-          </Text>
+  const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-          {/* Texto discreto no topo (conforme layout original) */}
-          {ultimoIpcaData && (
-            <Text style={styles.textoUltimoIpca}>
-              Base atualizada até: <Text style={styles.textoUltimoIpcaDestaque}>{ultimoIpcaData.mes}/{ultimoIpcaData.ano}</Text>
-            </Text>
-          )}
+  const formulario = (
+    <View style={[styles.card, desktop && styles.cardDesktop]}>
+      <Text style={styles.label}>Valor Original (R$)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ex: 1000,00"
+        placeholderTextColor={colors.textMuted}
+        keyboardType="decimal-pad"
+        value={valor}
+        onChangeText={setValor}
+      />
 
-          <View style={styles.card}>
-            <Text style={styles.label}>Valor Original (R$)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: 1000,00"
-              placeholderTextColor="#64748B"
-              keyboardType="decimal-pad"
-              value={valor}
-              onChangeText={setValor}
-            />
+      <Text style={styles.label}>Data Inicial (MM/AAAA)</Text>
+      <View style={styles.linhaInputs}>
+        <TextInput
+          style={[styles.input, styles.inputPequeno]}
+          placeholder="MM"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          maxLength={2}
+          value={mesInicio}
+          onChangeText={setMesInicio}
+        />
+        <TextInput
+          style={[styles.input, styles.inputPequeno]}
+          placeholder="AAAA"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          maxLength={4}
+          value={anoInicio}
+          onChangeText={setAnoInicio}
+        />
+      </View>
 
-            <Text style={styles.label}>Data Inicial (MM/AAAA)</Text>
-            <View style={styles.linhaInputs}>
-              <TextInput
-                style={[styles.input, styles.inputPequeno]}
-                placeholder="MM"
-                placeholderTextColor="#64748B"
-                keyboardType="number-pad"
-                maxLength={2}
-                value={mesInicio}
-                onChangeText={setMesInicio}
-              />
-              <TextInput
-                style={[styles.input, styles.inputPequeno]}
-                placeholder="AAAA"
-                placeholderTextColor="#64748B"
-                keyboardType="number-pad"
-                maxLength={4}
-                value={anoInicio}
-                onChangeText={setAnoInicio}
-              />
-            </View>
+      <View style={styles.headerDataFinal}>
+        <Text style={[styles.label, styles.labelSemMargem]}>Data Final (MM/AAAA)</Text>
 
-            <View style={styles.headerDataFinal}>
-              <Text style={styles.label}>Data Final (MM/AAAA)</Text>
-
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => setUsarDataAtual(!usarDataAtual)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.checkbox, usarDataAtual && styles.checkboxChecado]}>
-                  {usarDataAtual && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.checkboxLabel}>Usar IPCA mais recente</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.linhaInputs, usarDataAtual && styles.inputsDesabilitados]}>
-              <TextInput
-                style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
-                placeholder="MM"
-                placeholderTextColor="#64748B"
-                keyboardType="number-pad"
-                maxLength={2}
-                value={mesFim}
-                onChangeText={setMesFim}
-                editable={!usarDataAtual}
-              />
-              <TextInput
-                style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
-                placeholder="AAAA"
-                placeholderTextColor="#64748B"
-                keyboardType="number-pad"
-                maxLength={4}
-                value={anoFim}
-                onChangeText={setAnoFim}
-                editable={!usarDataAtual}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.botao} onPress={handleCalcular} disabled={carregando}>
-              {carregando ? (
-                <ActivityIndicator color="#0F172A" />
-              ) : (
-                <Text style={styles.botaoTexto}>Calcular</Text>
-              )}
-            </TouchableOpacity>
-
-            {erroCalculo && <Text style={styles.erroTexto}>{erroCalculo}</Text>}
-
-            {resultado && (
-              <View style={styles.resultadoBox}>
-                <Text style={styles.resultadoLinha}>
-                  Valor Corrigido:{' '}
-                  <Text style={styles.resultadoDestaque}>
-                    {resultado.valorCorrigido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </Text>
-                </Text>
-                <Text style={styles.resultadoLinha}>
-                  Variação Acumulada:{' '}
-                  <Text style={styles.resultadoDestaque}>
-                    {resultado.variacaoPercentualAcumulada}%
-                  </Text>
-                </Text>
-                <Text style={styles.resultadoLinhaSecundaria}>
-                  Total de meses considerados pelo servidor: {resultado.totalMeses}
-                </Text>
-              </View>
-            )}
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setUsarDataAtual(!usarDataAtual)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkbox, usarDataAtual && styles.checkboxChecado]}>
+            {usarDataAtual && <Text style={styles.checkmark}>✓</Text>}
           </View>
+          <Text style={styles.checkboxLabel}>Usar IPCA mais recente</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.linhaInputs, usarDataAtual && styles.inputsDesabilitados]}>
+        <TextInput
+          style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
+          placeholder="MM"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          maxLength={2}
+          value={mesFim}
+          onChangeText={setMesFim}
+          editable={!usarDataAtual}
+        />
+        <TextInput
+          style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
+          placeholder="AAAA"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          maxLength={4}
+          value={anoFim}
+          onChangeText={setAnoFim}
+          editable={!usarDataAtual}
+        />
+      </View>
+
+      <TouchableOpacity style={styles.botao} onPress={handleCalcular} disabled={carregando} activeOpacity={0.85}>
+        {carregando ? (
+          <ActivityIndicator color={colors.onPrimary} />
+        ) : (
+          <Text style={styles.botaoTexto}>Calcular</Text>
+        )}
+      </TouchableOpacity>
+
+      {erroCalculo && <Text style={styles.erroTexto}>{erroCalculo}</Text>}
+
+      {/* No celular o resultado aparece dentro do próprio cartão */}
+      {!desktop && resultado && (
+        <View style={styles.resultadoBox}>
+          <Text style={styles.resultadoRotulo}>Valor Corrigido</Text>
+          <Text style={styles.resultadoGrande}>{moeda(resultado.valorCorrigido)}</Text>
+          <View style={styles.resultadoDivisor} />
+          <View style={styles.resultadoLinhaDupla}>
+            <Text style={styles.resultadoLinha}>Variação Acumulada</Text>
+            <Text style={styles.resultadoDestaque}>{resultado.variacaoPercentualAcumulada}%</Text>
+          </View>
+          <View style={styles.resultadoLinhaDupla}>
+            <Text style={styles.resultadoLinha}>Meses considerados</Text>
+            <Text style={styles.resultadoDestaque}>{resultado.totalMeses}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  // No computador o resultado ganha um painel ao lado do formulário
+  const painelResultado = (
+    <View style={styles.painelResultado}>
+      <Text style={styles.overline}>RESULTADO</Text>
+      {resultado ? (
+        <>
+          <Text style={styles.resultadoEnorme}>{moeda(resultado.valorCorrigido)}</Text>
+          <Text style={styles.resultadoLegenda}>
+            Valor corrigido a partir de {moeda(resultado.valorInicial)} pelo IPCA acumulado no período.
+          </Text>
+          <View style={styles.metricas}>
+            <View style={styles.metrica}>
+              <Text style={styles.metricaRotulo}>Variação acumulada</Text>
+              <Text style={styles.metricaValor}>{resultado.variacaoPercentualAcumulada}%</Text>
+            </View>
+            <View style={styles.metrica}>
+              <Text style={styles.metricaRotulo}>Meses considerados</Text>
+              <Text style={styles.metricaValor}>{resultado.totalMeses}</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <Text style={styles.resultadoVazio}>
+          Preencha os dados ao lado e toque em Calcular para ver o valor corrigido pelo IPCA.
+        </Text>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={[styles.container, desktop && styles.containerDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <PageHeader
+            titulo="Calculadora IPCA Geral"
+            subtitulo="Calcula a correção monetária oficial acumulada no período."
+          >
+            {ultimoIpcaData && (
+              <Text style={styles.textoUltimoIpca}>
+                Base atualizada até{' '}
+                <Text style={styles.textoUltimoIpcaDestaque}>
+                  {ultimoIpcaData.mes}/{ultimoIpcaData.ano}
+                </Text>
+              </Text>
+            )}
+          </PageHeader>
+
+          {desktop ? (
+            <View style={styles.colunas}>
+              {formulario}
+              {painelResultado}
+            </View>
+          ) : (
+            formulario
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0F172A' },
-  container: { padding: 20 },
-  titulo: { fontSize: 22, fontWeight: '700', color: '#F8FAFC' },
-  subtitulo: { fontSize: 13, color: '#94A3B8', marginTop: 4, marginBottom: 4 },
-  
-  // Estilo sutil/discreto original
-  textoUltimoIpca: {
-    fontSize: 12,
-    color: '#38BDF8',
-    marginBottom: 16,
-  },
-  textoUltimoIpcaDestaque: {
-    fontWeight: '700',
-  },
+const createStyles = (c: Colors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: c.bg },
+    container: { padding: 20, width: '100%', maxWidth: 720, alignSelf: 'center' },
+    containerDesktop: { maxWidth: 1200, paddingHorizontal: 48, paddingVertical: 40 },
+    colunas: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
 
-  card: { backgroundColor: '#1E293B', borderRadius: 16, padding: 16 },
-  label: { color: '#CBD5E1', fontSize: 13, marginBottom: 6, marginTop: 10 },
-  input: {
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: '#F8FAFC',
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  linhaInputs: { flexDirection: 'row', gap: 10 },
-  inputPequeno: { flex: 1 },
-  headerDataFinal: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: '#64748B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0F172A',
-  },
-  checkboxChecado: {
-    backgroundColor: '#38BDF8',
-    borderColor: '#38BDF8',
-  },
-  checkmark: {
-    color: '#0F172A',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    color: '#38BDF8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  inputsDesabilitados: {
-    opacity: 0.4,
-  },
-  inputDisabledStyle: {
-    backgroundColor: '#1E293B',
-  },
-  botao: {
-    backgroundColor: '#38BDF8',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 18,
-  },
-  botaoTexto: { color: '#0F172A', fontWeight: '700', fontSize: 15 },
-  erroTexto: { color: '#F87171', fontSize: 13, marginTop: 10, textAlign: 'center' },
-  resultadoBox: { marginTop: 18, borderTopWidth: 1, borderTopColor: '#334155', paddingTop: 14 },
-  resultadoLinha: { color: '#E2E8F0', fontSize: 15, marginBottom: 4 },
-  resultadoDestaque: { color: '#4ADE80', fontWeight: '700' },
-  resultadoLinhaSecundaria: { color: '#64748B', fontSize: 12, marginTop: 4 },
-});
+    textoUltimoIpca: {
+      alignSelf: 'flex-start',
+      fontSize: 12,
+      color: c.textSecondary,
+      backgroundColor: c.primarySoft,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      overflow: 'hidden',
+      marginTop: 14,
+    },
+    textoUltimoIpcaDestaque: { fontWeight: '800', color: c.accent },
+
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.border,
+      boxShadow: c.cardShadow,
+    },
+    cardDesktop: { width: 520, padding: 28 },
+    label: { color: c.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 16 },
+    labelSemMargem: { marginTop: 0, marginBottom: 0 },
+    input: {
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      color: c.text,
+      fontSize: 15,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    linhaInputs: { flexDirection: 'row', gap: 12 },
+    inputPequeno: { flex: 1, minWidth: 0 },
+    headerDataFinal: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    checkboxContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: c.textMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surfaceAlt,
+    },
+    checkboxChecado: { backgroundColor: c.primary, borderColor: c.primary },
+    checkmark: { color: c.onPrimary, fontSize: 12, fontWeight: 'bold' },
+    checkboxLabel: { color: c.textSecondary, fontSize: 12, fontWeight: '600' },
+    inputsDesabilitados: { opacity: 0.45 },
+    inputDisabledStyle: { backgroundColor: c.border },
+    botao: {
+      backgroundColor: c.primary,
+      borderRadius: 16,
+      paddingVertical: 17,
+      alignItems: 'center',
+      marginTop: 24,
+      boxShadow: c.buttonShadow,
+    },
+    botaoTexto: { color: c.onPrimary, fontWeight: '800', fontSize: 16, letterSpacing: 0.2 },
+    erroTexto: { color: c.danger, fontSize: 13, marginTop: 14, textAlign: 'center' },
+
+    // resultado dentro do cartão (celular)
+    resultadoBox: {
+      marginTop: 20,
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 18,
+    },
+    resultadoRotulo: { color: c.textSecondary, fontSize: 13, fontWeight: '600' },
+    resultadoGrande: { color: c.success, fontSize: 32, fontWeight: '800', letterSpacing: -0.8, marginTop: 4 },
+    resultadoDivisor: { height: 1, backgroundColor: c.border, marginVertical: 14 },
+    resultadoLinhaDupla: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+    resultadoLinha: { color: c.textSecondary, fontSize: 14 },
+    resultadoDestaque: { color: c.text, fontWeight: '800', fontSize: 15 },
+
+    // painel de resultado (computador)
+    painelResultado: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: c.border,
+      boxShadow: c.cardShadow,
+    },
+    overline: { color: c.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
+    resultadoEnorme: { color: c.success, fontSize: 52, fontWeight: '800', letterSpacing: -1.6, marginTop: 16 },
+    resultadoLegenda: { color: c.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 8 },
+    metricas: { flexDirection: 'row', gap: 12, marginTop: 24 },
+    metrica: {
+      flex: 1,
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 18,
+    },
+    metricaRotulo: { color: c.textSecondary, fontSize: 13, fontWeight: '600' },
+    metricaValor: { color: c.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 6 },
+    resultadoVazio: { color: c.textSecondary, fontSize: 15, lineHeight: 23, marginTop: 16 },
+  });
+

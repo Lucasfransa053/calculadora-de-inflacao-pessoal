@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -12,6 +11,10 @@ import {
   FlatList,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, useTheme } from '../theme';
+import { PageHeader } from '../components/PageHeader';
+import { useIsDesktop } from '../hooks/useLayout';
 import {
   buscarCategoriasIpca,
   calcularInflacaoPessoal,
@@ -119,6 +122,10 @@ const GRUPOS_PRINCIPAIS: GrupoUI[] = [
 ];
 
 export default function InflacaoPessoalScreen() {
+  const { colors } = useTheme();
+  const desktop = useIsDesktop();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [categorias, setCategorias] = useState<CategoriaIpca[]>([]);
   const [cestaGasto, setCestaGasto] = useState<{ categoriaId: string; nome: string; valor: string }[]>([]);
   
@@ -266,218 +273,243 @@ export default function InflacaoPessoalScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.titulo}>Minha Inflação Pessoal</Text>
-        <Text style={styles.subtitulo}>
-          Monte sua cesta de consumo navegando pelos grupos abaixo e acompanhe o total acumulado.
-        </Text>
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-        {loading ? (
-          <ActivityIndicator size="large" color="#38BDF8" style={{ marginVertical: 40 }} />
-        ) : (
-          <View style={styles.cardPrincipal}>
-            
-            <View style={styles.periodoContainer}>
-              <Text style={styles.labelPeriodo}>Período de Análise:</Text>
-              <View style={styles.datasRow}>
-                <View style={styles.dataInputGroup}>
-                  <TextInput style={styles.inputData} value={mesInicio} onChangeText={setMesInicio} keyboardType="numeric" maxLength={2} placeholder="MM" placeholderTextColor="#64748B" />
-                  <Text style={styles.barraData}>/</Text>
-                  <TextInput style={styles.inputDataAno} value={anoInicio} onChangeText={setAnoInicio} keyboardType="numeric" maxLength={4} placeholder="AAAA" placeholderTextColor="#64748B" />
-                </View>
-                <Text style={styles.ateTexto}>até</Text>
-                <View style={styles.dataInputGroup}>
-                  <TextInput style={styles.inputData} value={mesFim} onChangeText={setMesFim} keyboardType="numeric" maxLength={2} placeholder="MM" placeholderTextColor="#64748B" />
-                  <Text style={styles.barraData}>/</Text>
-                  <TextInput style={styles.inputDataAno} value={anoFim} onChangeText={setAnoFim} keyboardType="numeric" maxLength={4} placeholder="AAAA" placeholderTextColor="#64748B" />
-                </View>
-              </View>
+  // Bloco 1: período + escolha do grupo + item escolhido
+  const montagem = (
+    <View style={[styles.card, desktop && styles.cardMontagem]}>
+      <View style={styles.periodoContainer}>
+        <Text style={styles.labelPeriodo}>Período de Análise</Text>
+        <View style={styles.datasRow}>
+          <View style={styles.dataInputGroup}>
+            <TextInput style={styles.inputData} value={mesInicio} onChangeText={setMesInicio} keyboardType="numeric" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted} />
+            <Text style={styles.barraData}>/</Text>
+            <TextInput style={styles.inputDataAno} value={anoInicio} onChangeText={setAnoInicio} keyboardType="numeric" maxLength={4} placeholder="AAAA" placeholderTextColor={colors.textMuted} />
+          </View>
+          <Text style={styles.ateTexto}>até</Text>
+          <View style={styles.dataInputGroup}>
+            <TextInput style={styles.inputData} value={mesFim} onChangeText={setMesFim} keyboardType="numeric" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted} />
+            <Text style={styles.barraData}>/</Text>
+            <TextInput style={styles.inputDataAno} value={anoFim} onChangeText={setAnoFim} keyboardType="numeric" maxLength={4} placeholder="AAAA" placeholderTextColor={colors.textMuted} />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.divisor} />
+
+      <Text style={styles.cardTitulo}>1. Escolha um Grupo de Gastos</Text>
+      <View style={styles.gridGrupos}>
+        {GRUPOS_PRINCIPAIS.map(grupo => (
+          <TouchableOpacity
+            key={grupo.id}
+            style={styles.botaoGrupoGrid}
+            activeOpacity={0.8}
+            onPress={() => {
+              setGrupoAtivoModal(grupo);
+              setBuscaCategoria('');
+            }}
+          >
+            <Text style={styles.iconeGrupoGrid}>{grupo.icone}</Text>
+            <Text style={styles.nomeGrupoGrid} numberOfLines={2}>{grupo.nome}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {categoriaSelecionada && (
+        <View style={styles.boxInsercaoValor}>
+          <Text style={styles.itemSelecionadoLabel}>Item Escolhido:</Text>
+          <Text style={styles.itemSelecionadoNome}>
+            {formatarNomeCategoria(categoriaSelecionada.nome)}
+          </Text>
+
+          <View style={styles.rowAdicionarValor}>
+            <View style={styles.inputGastoWrapper}>
+              <Text style={styles.prefixoMoeda}>R$</Text>
+              <TextInput
+                style={styles.inputGasto}
+                keyboardType="numeric"
+                placeholder="0,00"
+                placeholderTextColor={colors.textMuted}
+                value={valorInput}
+                onChangeText={setValorInput}
+                autoFocus
+              />
             </View>
-
-            <View style={styles.divisor} />
-
-            <Text style={styles.cardTitulo}>1. Escolha um Grupo de Gastos</Text>
-            <View style={styles.gridGrupos}>
-              {GRUPOS_PRINCIPAIS.map(grupo => (
-                <TouchableOpacity
-                  key={grupo.id}
-                  style={styles.botaoGrupoGrid}
-                  onPress={() => {
-                    setGrupoAtivoModal(grupo);
-                    setBuscaCategoria('');
-                  }}
-                >
-                  <Text style={styles.iconeGrupoGrid}>{grupo.icone}</Text>
-                  <Text style={styles.nomeGrupoGrid} numberOfLines={2}>{grupo.nome}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {categoriaSelecionada && (
-              <View style={styles.boxInsercaoValor}>
-                <Text style={styles.itemSelecionadoLabel}>Item Escolhido:</Text>
-                <Text style={styles.itemSelecionadoNome}>
-                  {formatarNomeCategoria(categoriaSelecionada.nome)}
-                </Text>
-                
-                <View style={styles.rowAdicionarValor}>
-                  <View style={styles.inputGastoWrapper}>
-                    <Text style={styles.prefixoMoeda}>R$</Text>
-                    <TextInput
-                      style={styles.inputGasto}
-                      keyboardType="numeric"
-                      placeholder="0,00"
-                      placeholderTextColor="#64748B"
-                      value={valorInput}
-                      onChangeText={setValorInput}
-                      autoFocus
-                    />
-                  </View>
-                  <TouchableOpacity style={styles.btnAdicionar} onPress={handleAdicionarItemCesta}>
-                    <Text style={styles.btnAdicionarTexto}>+ Confirmar Item</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.divisor} />
-
-            <View style={styles.headerCestaRow}>
-              <Text style={styles.cardTitulo}>2. Sua Cesta de Consumo</Text>
-              
-              <View style={styles.badgeTotalCesta}>
-                <Text style={styles.badgeTotalLabel}>Total na Cesta:</Text>
-                <Text style={styles.badgeTotalValor}>
-                  R$ {totalCesta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </Text>
-              </View>
-            </View>
-
-            {cestaGasto.length === 0 ? (
-              <Text style={styles.cestaVaziaTexto}>Nenhum item adicionado ainda. Escolha um grupo acima.</Text>
-            ) : (
-              <View style={styles.listaCesta}>
-                {cestaGasto.map(item => (
-                  <View key={item.categoriaId} style={styles.cestaItem}>
-                    <Text style={styles.cestaItemNome}>📦 {item.nome}</Text>
-                    <Text style={styles.cestaItemValor}>
-                      R$ {parseFloat(item.valor.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </Text>
-                    <TouchableOpacity style={styles.btnRemover} onPress={() => handleRemoverItemCesta(item.categoriaId)}>
-                      <Text style={styles.btnRemoverTexto}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {erro && <Text style={styles.textoErro}>{erro}</Text>}
-
-            <TouchableOpacity 
-              style={[styles.botaoAcao, cestaGasto.length === 0 && { opacity: 0.5 }]} 
-              onPress={handleCalcular} 
-              disabled={calculando || cestaGasto.length === 0}
-            >
-              {calculando ? (
-                <ActivityIndicator color="#0F172A" />
-              ) : (
-                <Text style={styles.botaoTextoAcao}>Calcular Inflação Pessoal</Text>
-              )}
+            <TouchableOpacity style={styles.btnAdicionar} onPress={handleAdicionarItemCesta} activeOpacity={0.85}>
+              <Text style={styles.btnAdicionarTexto}>+ Confirmar Item</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
+      )}
+    </View>
+  );
 
-        {resultado && (
-          <View style={styles.cardResultado}>
-            <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>
-            
-            {resultado?.mensagemAviso && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <View style={styles.warningContent}>
-                  <Text style={styles.warningTextPrefix}>
-                    {itensAvisoDesconsiderados.textoPrefixo}
-                  </Text>
-                  {itensAvisoDesconsiderados.itens.length > 0 && (
-                    <View style={styles.warningBadgesRow}>
-                      {itensAvisoDesconsiderados.itens.map((item, idx) => (
-                        <View key={idx} style={styles.warningBadgeItem}>
-                          <Text style={styles.warningBadgeText}>{item}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
+  // Bloco 2: cesta + botão de calcular
+  const cesta = (
+    <View style={styles.card}>
+      <View style={styles.headerCestaRow}>
+        <Text style={[styles.cardTitulo, styles.semMargemInferior]}>2. Sua Cesta de Consumo</Text>
 
-            <View style={styles.metricasGrid}>
-              <View style={styles.metricaBox}>
-                <Text style={styles.metricaLabel}>Sua Inflação</Text>
-                <Text style={[styles.metricaValor, { color: '#38BDF8' }]}>
-                  {resultado.inflacaoPessoalPercentual.toFixed(2)}%
-                </Text>
-              </View>
-              <View style={styles.metricaBox}>
-                <Text style={styles.metricaLabel}>IPCA Oficial</Text>
-                <Text style={[styles.metricaValor, { color: '#94A3B8' }]}>
-                  {resultado.inflacaoOficialIpcaPercentual.toFixed(2)}%
-                </Text>
-              </View>
-              <View style={styles.metricaBox}>
-                <Text style={styles.metricaLabel}>Diferença</Text>
-                <Text
-                  style={[
-                    styles.metricaValor,
-                    { color: resultado.diferencaParaIpcaOficialPercentual > 0 ? '#EF4444' : '#22C55E' },
-                  ]}
-                >
-                  {resultado.diferencaParaIpcaOficialPercentual > 0 ? '+' : ''}
-                  {resultado.diferencaParaIpcaOficialPercentual.toFixed(2)}%
-                </Text>
-              </View>
-            </View>
+        <View style={styles.badgeTotalCesta}>
+          <Text style={styles.badgeTotalLabel}>Total na Cesta:</Text>
+          <Text style={styles.badgeTotalValor}>R$ {fmt(totalCesta)}</Text>
+        </View>
+      </View>
 
-            <View style={styles.divisorResumo} />
-
-            <View style={styles.linhaResumo}>
-              <Text style={styles.textoResumoLabel}>Custo Inicial Total:</Text>
-              <Text style={styles.textoResumoValor}>R$ {resultado.custoTotalInicial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
-            </View>
-            <View style={styles.linhaResumo}>
-              <Text style={styles.textoResumoLabel}>Custo Recomposto:</Text>
-              <Text style={styles.textoResumoValorDestaque}>R$ {resultado.custoTotalRecomposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
-            </View>
-            <View style={styles.linhaResumo}>
-              <Text style={styles.textoResumoLabel}>Aumento Real de Custo:</Text>
-              <Text style={[styles.textoResumoValorDestaque, { color: '#EF4444' }]}>
-                + R$ {resultado.perdaPoderCompraReais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+      {cestaGasto.length === 0 ? (
+        <Text style={styles.cestaVaziaTexto}>Nenhum item adicionado ainda. Escolha um grupo acima.</Text>
+      ) : (
+        <View style={styles.listaCesta}>
+          {cestaGasto.map(item => (
+            <View key={item.categoriaId} style={styles.cestaItem}>
+              <Text style={styles.cestaItemNome}>📦 {item.nome}</Text>
+              <Text style={styles.cestaItemValor}>
+                R$ {fmt(parseFloat(item.valor.replace(',', '.')))}
               </Text>
+              <TouchableOpacity style={styles.btnRemover} onPress={() => handleRemoverItemCesta(item.categoriaId)}>
+                <Text style={styles.btnRemoverTexto}>✕</Text>
+              </TouchableOpacity>
             </View>
+          ))}
+        </View>
+      )}
 
-            {resultado.detalhamento && resultado.detalhamento.length > 0 && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={styles.subtituloDetalhamento}>Detalhamento da Cesta:</Text>
-                {resultado.detalhamento.map(item => (
-                  <Pressable
-                    key={item.categoriaId}
-                    style={({ hovered }: { hovered?: boolean }) => [
-                      styles.linhaDetalhamento,
-                      hovered && styles.linhaDetalhamentoHover,
-                    ]}
-                  >
-                    <Text style={styles.nomeDetalhamento} numberOfLines={1}>
-                      📦 {formatarNomeCategoria(item.nomeCategoria)}
-                    </Text>
-                    <Text style={styles.valorDetalhamento}>
-                      {item.inflacaoAcumuladaCategoriaPercentual.toFixed(2)}%
-                    </Text>
-                  </Pressable>
+      {erro && <Text style={styles.textoErro}>{erro}</Text>}
+
+      <TouchableOpacity
+        style={[styles.botaoAcao, cestaGasto.length === 0 && { opacity: 0.5 }]}
+        onPress={handleCalcular}
+        disabled={calculando || cestaGasto.length === 0}
+        activeOpacity={0.85}
+      >
+        {calculando ? (
+          <ActivityIndicator color={colors.onPrimary} />
+        ) : (
+          <Text style={styles.botaoTextoAcao}>Calcular Inflação Pessoal</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Bloco 3: resultado
+  const blocoResultado = resultado ? (
+    <View style={styles.cardResultado}>
+      <Text style={styles.cardTituloResultado}>Resultado da Sua Inflação</Text>
+
+      {resultado?.mensagemAviso && (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningIcon}>⚠️</Text>
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTextPrefix}>
+              {itensAvisoDesconsiderados.textoPrefixo}
+            </Text>
+            {itensAvisoDesconsiderados.itens.length > 0 && (
+              <View style={styles.warningBadgesRow}>
+                {itensAvisoDesconsiderados.itens.map((item, idx) => (
+                  <View key={idx} style={styles.warningBadgeItem}>
+                    <Text style={styles.warningBadgeText}>{item}</Text>
+                  </View>
                 ))}
               </View>
             )}
+          </View>
+        </View>
+      )}
+
+      <View style={styles.metricasGrid}>
+        <View style={styles.metricaBox}>
+          <Text style={styles.metricaLabel}>Sua Inflação</Text>
+          <Text style={[styles.metricaValor, { color: colors.accent }]}>
+            {resultado.inflacaoPessoalPercentual.toFixed(2)}%
+          </Text>
+        </View>
+        <View style={styles.metricaBox}>
+          <Text style={styles.metricaLabel}>IPCA Oficial</Text>
+          <Text style={[styles.metricaValor, { color: colors.textSecondary }]}>
+            {resultado.inflacaoOficialIpcaPercentual.toFixed(2)}%
+          </Text>
+        </View>
+        <View style={styles.metricaBox}>
+          <Text style={styles.metricaLabel}>Diferença</Text>
+          <Text
+            style={[
+              styles.metricaValor,
+              { color: resultado.diferencaParaIpcaOficialPercentual > 0 ? colors.danger : colors.success },
+            ]}
+          >
+            {resultado.diferencaParaIpcaOficialPercentual > 0 ? '+' : ''}
+            {resultado.diferencaParaIpcaOficialPercentual.toFixed(2)}%
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.divisorResumo} />
+
+      <View style={styles.linhaResumo}>
+        <Text style={styles.textoResumoLabel}>Custo Inicial Total:</Text>
+        <Text style={styles.textoResumoValor}>R$ {resultado.custoTotalInicial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+      </View>
+      <View style={styles.linhaResumo}>
+        <Text style={styles.textoResumoLabel}>Custo Recomposto:</Text>
+        <Text style={styles.textoResumoValorDestaque}>R$ {resultado.custoTotalRecomposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+      </View>
+      <View style={styles.linhaResumo}>
+        <Text style={styles.textoResumoLabel}>Aumento Real de Custo:</Text>
+        <Text style={[styles.textoResumoValorDestaque, { color: colors.danger }]}>
+          + R$ {resultado.perdaPoderCompraReais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+        </Text>
+      </View>
+
+      {resultado.detalhamento && resultado.detalhamento.length > 0 && (
+        <View style={{ marginTop: 16 }}>
+          <Text style={styles.subtituloDetalhamento}>Detalhamento da Cesta:</Text>
+          {resultado.detalhamento.map(item => (
+            <Pressable
+              key={item.categoriaId}
+              style={(state) => [
+                styles.linhaDetalhamento,
+                (state as { hovered?: boolean }).hovered && styles.linhaDetalhamentoHover,
+              ]}
+            >
+              <Text style={styles.nomeDetalhamento} numberOfLines={1}>
+                📦 {formatarNomeCategoria(item.nomeCategoria)}
+              </Text>
+              <Text style={styles.valorDetalhamento}>
+                {item.inflacaoAcumuladaCategoriaPercentual.toFixed(2)}%
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  ) : null;
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={[styles.container, desktop && styles.containerDesktop]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <PageHeader
+          titulo="Minha Inflação Pessoal"
+          subtitulo="Monte sua cesta de consumo navegando pelos grupos abaixo e acompanhe o total acumulado."
+        />
+
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 40 }} />
+        ) : desktop ? (
+          <View style={styles.colunas}>
+            {montagem}
+            <View style={styles.colunaDireita}>
+              {cesta}
+              {blocoResultado}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.pilha}>
+            {montagem}
+            {cesta}
+            {blocoResultado}
           </View>
         )}
       </ScrollView>
@@ -492,7 +524,7 @@ export default function InflacaoPessoalScreen() {
             <TextInput
               style={styles.inputBuscaModal}
               placeholder={`Buscar em ${grupoAtivoModal?.nome}...`}
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textMuted}
               value={buscaCategoria}
               onChangeText={setBuscaCategoria}
               autoFocus
@@ -540,80 +572,239 @@ export default function InflacaoPessoalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0F172A' },
-  container: { padding: 20 },
-  titulo: { fontSize: 22, fontWeight: '700', color: '#F8FAFC' },
-  subtitulo: { fontSize: 13, color: '#94A3B8', marginTop: 4, marginBottom: 16 },
-  cardPrincipal: { backgroundColor: '#1E293B', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#334155' },
-  cardTitulo: { fontSize: 15, fontWeight: '600', color: '#F8FAFC', marginBottom: 12 },
-  periodoContainer: { marginBottom: 8 },
-  labelPeriodo: { color: '#94A3B8', fontSize: 12, fontWeight: '600', marginBottom: 8 },
-  datasRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dataInputGroup: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: '#334155' },
-  inputData: { color: '#F8FAFC', paddingVertical: 6, width: 28, textAlign: 'center', fontWeight: '600' },
-  inputDataAno: { color: '#F8FAFC', paddingVertical: 6, width: 44, textAlign: 'center', fontWeight: '600' },
-  barraData: { color: '#64748B', marginHorizontal: 2 },
-  ateTexto: { color: '#64748B', fontSize: 12 },
-  divisor: { height: 1, backgroundColor: '#334155', marginVertical: 16 },
-  gridGrupos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  botaoGrupoGrid: { width: '31%', backgroundColor: '#0F172A', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  iconeGrupoGrid: { fontSize: 22, marginBottom: 4 },
-  nomeGrupoGrid: { color: '#E2E8F0', fontSize: 11, textAlign: 'center', fontWeight: '500' },
-  boxInsercaoValor: { backgroundColor: '#0F172A', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#38BDF8', marginTop: 8 },
-  itemSelecionadoLabel: { color: '#38BDF8', fontSize: 11, fontWeight: '600' },
-  itemSelecionadoNome: { color: '#F8FAFC', fontSize: 14, fontWeight: '700', marginBottom: 10 },
-  rowAdicionarValor: { flexDirection: 'row', gap: 10 },
-  inputGastoWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
-  prefixoMoeda: { color: '#64748B', fontSize: 12, marginRight: 4 },
-  inputGasto: { flex: 1, color: '#F8FAFC', fontSize: 14, fontWeight: '600', paddingVertical: 8 },
-  btnAdicionar: { backgroundColor: '#38BDF8', paddingHorizontal: 16, justifyContent: 'center', borderRadius: 8 },
-  btnAdicionarTexto: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
-  headerCestaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  badgeTotalCesta: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#38BDF8', flexDirection: 'row', gap: 6, alignItems: 'center' },
-  badgeTotalLabel: { color: '#94A3B8', fontSize: 11 },
-  badgeTotalValor: { color: '#38BDF8', fontSize: 13, fontWeight: '800' },
-  cestaVaziaTexto: { color: '#64748B', fontSize: 13, fontStyle: 'italic', marginBottom: 16 },
-  listaCesta: { gap: 8, marginBottom: 16 },
-  cestaItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
-  cestaItemNome: { flex: 1, color: '#E2E8F0', fontSize: 13 },
-  cestaItemValor: { color: '#38BDF8', fontSize: 14, fontWeight: '600', marginRight: 12 },
-  btnRemover: { backgroundColor: '#EF444420', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  btnRemoverTexto: { color: '#EF4444', fontWeight: 'bold' },
-  textoErro: { color: '#EF4444', fontSize: 13, marginBottom: 12, textAlign: 'center' },
-  botaoAcao: { backgroundColor: '#38BDF8', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
-  botaoTextoAcao: { color: '#0F172A', fontWeight: '700', fontSize: 15 },
-  cardResultado: { backgroundColor: '#1E293B', borderRadius: 16, padding: 20, marginTop: 20, borderWidth: 1, borderColor: '#38BDF8' },
-  cardTituloResultado: { fontSize: 18, fontWeight: '700', color: '#F8FAFC', marginBottom: 12 },
-  warningCard: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#2A1F0D', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16 },
-  warningIcon: { marginRight: 10, fontSize: 18, marginTop: 2 },
-  warningContent: { flex: 1 },
-  warningTextPrefix: { color: '#FDE68A', fontSize: 13, fontWeight: '600', marginBottom: 8, lineHeight: 18 },
-  warningBadgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  warningBadgeItem: { backgroundColor: '#854D0E', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#F59E0B' },
-  warningBadgeText: { color: '#FEF08A', fontSize: 12, fontWeight: '700' },
-  metricasGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 16 },
-  metricaBox: { flex: 1, backgroundColor: '#0F172A', padding: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  metricaLabel: { color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
-  metricaValor: { fontSize: 15, fontWeight: '800' },
-  divisorResumo: { height: 1, backgroundColor: '#334155', marginVertical: 12 },
-  linhaResumo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  textoResumoLabel: { color: '#94A3B8', fontSize: 13 },
-  textoResumoValor: { color: '#F8FAFC', fontSize: 13, fontWeight: '600' },
-  textoResumoValorDestaque: { color: '#38BDF8', fontSize: 14, fontWeight: '700' },
-  subtituloDetalhamento: { color: '#F8FAFC', fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 4 },
-  linhaDetalhamento: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 8, borderRadius: 6 },
-  linhaDetalhamentoHover: { backgroundColor: '#0F172A' },
-  nomeDetalhamento: { color: '#94A3B8', fontSize: 12, flex: 1, marginRight: 8 },
-  valorDetalhamento: { color: '#38BDF8', fontSize: 12, fontWeight: '600' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.85)', justifyContent: 'center', padding: 20 },
-  modalContainer: { backgroundColor: '#1E293B', borderRadius: 12, padding: 20, maxHeight: '80%', borderWidth: 1, borderColor: '#334155' },
-  modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
-  inputBuscaModal: { backgroundColor: '#0F172A', color: '#F8FAFC', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#38BDF8', marginBottom: 12, fontSize: 14 },
-  modalList: { marginBottom: 12 },
-  modalItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' },
-  modalItemText: { color: '#E2E8F0', fontSize: 14 },
-  textoVazioModal: { color: '#64748B', textAlign: 'center', marginTop: 20, fontStyle: 'italic' },
-  modalCloseBtn: { alignItems: 'center', paddingVertical: 12, backgroundColor: '#334155', borderRadius: 8 },
-  modalCloseText: { color: '#F8FAFC', fontWeight: '600' },
-});
+const createStyles = (c: Colors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: c.bg, paddingTop: 10 },
+    container: { padding: 20, width: '100%', maxWidth: 720, alignSelf: 'center' },
+    containerDesktop: { maxWidth: 1200, paddingHorizontal: 48, paddingVertical: 40 },
+    colunas: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+    colunaDireita: { flex: 1, gap: 20 },
+    pilha: { gap: 20 },
+
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.border,
+      boxShadow: c.cardShadow,
+    },
+    cardMontagem: { width: 600, padding: 28 },
+    cardTitulo: { fontSize: 17, fontWeight: '800', color: c.text, marginBottom: 14, letterSpacing: -0.3 },
+    semMargemInferior: { marginBottom: 0 },
+
+    periodoContainer: { marginBottom: 4 },
+    labelPeriodo: { color: c.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8 },
+    datasRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+    dataInputGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.surfaceAlt,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    inputData: { color: c.text, paddingVertical: 12, width: 32, textAlign: 'center', fontWeight: '700', fontSize: 15 },
+    inputDataAno: { color: c.text, paddingVertical: 12, width: 52, textAlign: 'center', fontWeight: '700', fontSize: 15 },
+    barraData: { color: c.textMuted, marginHorizontal: 2 },
+    ateTexto: { color: c.textMuted, fontSize: 13, fontWeight: '500' },
+    divisor: { height: 1, backgroundColor: c.border, marginVertical: 20 },
+
+    gridGrupos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
+    botaoGrupoGrid: {
+      flexGrow: 1,
+      flexBasis: '30%',
+      minWidth: 0,
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    iconeGrupoGrid: { fontSize: 26, marginBottom: 8 },
+    nomeGrupoGrid: { color: c.text, fontSize: 12, textAlign: 'center', fontWeight: '600' },
+
+    boxInsercaoValor: {
+      backgroundColor: c.primarySoft,
+      borderRadius: 18,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: c.primary,
+      marginTop: 16,
+    },
+    itemSelecionadoLabel: { color: c.textSecondary, fontSize: 12, fontWeight: '600' },
+    itemSelecionadoNome: { color: c.accent, fontSize: 15, fontWeight: '800', marginTop: 2, marginBottom: 12 },
+    rowAdicionarValor: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+    inputGastoWrapper: {
+      flex: 1,
+      minWidth: 140,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.surface,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    prefixoMoeda: { color: c.textMuted, fontSize: 14, marginRight: 6, fontWeight: '600' },
+    inputGasto: { flex: 1, color: c.text, fontSize: 15, fontWeight: '700', paddingVertical: 13 },
+    btnAdicionar: {
+      backgroundColor: c.primary,
+      paddingHorizontal: 18,
+      paddingVertical: 13,
+      justifyContent: 'center',
+      borderRadius: 14,
+      boxShadow: c.buttonShadow,
+    },
+    btnAdicionarTexto: { color: c.onPrimary, fontSize: 14, fontWeight: '800' },
+
+    headerCestaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    badgeTotalCesta: {
+      backgroundColor: c.primarySoft,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      flexDirection: 'row',
+      gap: 6,
+      alignItems: 'center',
+    },
+    badgeTotalLabel: { color: c.textSecondary, fontSize: 12 },
+    badgeTotalValor: { color: c.accent, fontSize: 13, fontWeight: '800' },
+    cestaVaziaTexto: { color: c.textMuted, fontSize: 13, fontStyle: 'italic', marginBottom: 16 },
+    listaCesta: { gap: 10, marginBottom: 16 },
+    cestaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.surfaceAlt,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    cestaItemNome: { flex: 1, color: c.text, fontSize: 14, fontWeight: '600' },
+    cestaItemValor: { color: c.text, fontSize: 14, fontWeight: '800', marginHorizontal: 12 },
+    btnRemover: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: c.dangerSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    btnRemoverTexto: { color: c.danger, fontWeight: 'bold', fontSize: 12 },
+    textoErro: { color: c.danger, fontSize: 13, marginBottom: 12, textAlign: 'center' },
+    botaoAcao: {
+      backgroundColor: c.primary,
+      borderRadius: 16,
+      paddingVertical: 17,
+      alignItems: 'center',
+      marginTop: 4,
+      boxShadow: c.buttonShadow,
+    },
+    botaoTextoAcao: { color: c.onPrimary, fontWeight: '800', fontSize: 16, letterSpacing: 0.2 },
+
+    cardResultado: {
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: c.border,
+      boxShadow: c.cardShadow,
+    },
+    cardTituloResultado: { fontSize: 18, fontWeight: '800', color: c.text, marginBottom: 16, letterSpacing: -0.3 },
+    warningCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: c.warnBg,
+      borderColor: c.warnBorder,
+      borderWidth: 1,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 16,
+    },
+    warningIcon: { marginRight: 10, fontSize: 18, marginTop: 2 },
+    warningContent: { flex: 1 },
+    warningTextPrefix: { color: c.warnText, fontSize: 13, fontWeight: '600', marginBottom: 8, lineHeight: 18 },
+    warningBadgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    warningBadgeItem: {
+      backgroundColor: c.warnBadgeBg,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.warnBorder,
+    },
+    warningBadgeText: { color: c.warnBadgeText, fontSize: 12, fontWeight: '700' },
+    metricasGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginBottom: 16 },
+    metricaBox: {
+      flex: 1,
+      backgroundColor: c.surfaceAlt,
+      paddingVertical: 14,
+      paddingHorizontal: 10,
+      borderRadius: 16,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    metricaLabel: { color: c.textSecondary, fontSize: 12, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
+    metricaValor: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+    divisorResumo: { height: 1, backgroundColor: c.border, marginVertical: 12 },
+    linhaResumo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    textoResumoLabel: { color: c.textSecondary, fontSize: 14 },
+    textoResumoValor: { color: c.text, fontSize: 14, fontWeight: '800' },
+    textoResumoValorDestaque: { color: c.accent, fontSize: 15, fontWeight: '800' },
+    subtituloDetalhamento: { color: c.text, fontSize: 14, fontWeight: '800', marginBottom: 8, marginTop: 4 },
+    linhaDetalhamento: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 9,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+    },
+    linhaDetalhamentoHover: { backgroundColor: c.surfaceAlt },
+    nomeDetalhamento: { color: c.textSecondary, fontSize: 13, flex: 1, marginRight: 8 },
+    valorDetalhamento: { color: c.accent, fontSize: 13, fontWeight: '700' },
+
+    modalBackdrop: { flex: 1, backgroundColor: c.overlay, justifyContent: 'center', padding: 20 },
+    modalContainer: {
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 24,
+      maxHeight: '80%',
+      width: '100%',
+      maxWidth: 560,
+      alignSelf: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+      boxShadow: '0px 20px 60px rgba(0, 0, 0, 0.35)',
+    },
+    modalTitle: { color: c.text, fontSize: 19, fontWeight: '800', marginBottom: 14, textAlign: 'center', letterSpacing: -0.3 },
+    inputBuscaModal: {
+      backgroundColor: c.surfaceAlt,
+      color: c.text,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+      borderWidth: 1,
+      borderColor: c.primary,
+      marginBottom: 12,
+      fontSize: 15,
+    },
+    modalList: { marginBottom: 12 },
+    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border },
+    modalItemText: { color: c.text, fontSize: 14 },
+    textoVazioModal: { color: c.textMuted, textAlign: 'center', marginTop: 20, fontStyle: 'italic' },
+    modalCloseBtn: { alignItems: 'center', paddingVertical: 14, backgroundColor: c.surfaceAlt, borderRadius: 14, borderWidth: 1, borderColor: c.border },
+    modalCloseText: { color: c.text, fontWeight: '700' },
+  });

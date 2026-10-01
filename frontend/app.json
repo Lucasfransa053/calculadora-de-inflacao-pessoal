@@ -1,13 +1,11 @@
 {
   "expo": {
-    "name": "Calculadora de Inflação Pessoal",
+    "name": "InflateIQ",
     "slug": "calculadora-inflacao-pessoal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#0F172A"
-    },
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -16,14 +14,22 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0F172A"
-      }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFE100"
+      },
+      "package": "com.guilhermecosm.calculadorainflacaopessoal"
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9465f8dd-38d7-48eb-8255-e7eab00004b2"
+      }
+    }
   }
 }
