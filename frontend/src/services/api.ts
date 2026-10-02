@@ -1,14 +1,5 @@
-import { Platform } from 'react-native';
-
-// Trata a URL dependendo da plataforma (Web, Android Emulator ou iOS/Dispositivo)
-const getBaseUrl = () => {
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080/api'; // IP especial para o Emulador Android acessar o Host
-  }
-  return 'http://localhost:8080/api'; // Para Web, iOS Simulator
-};
-
-export const API_BASE_URL = getBaseUrl();
+// URL do backend hospedado no Render
+export const API_BASE_URL = 'https://inflateiq.onrender.com/api';
 
 // ==========================================
 // INTERFACES (DTOs)
