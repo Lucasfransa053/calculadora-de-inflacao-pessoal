@@ -1,8 +1,8 @@
 import { obterToken } from './auth';
 
 // URL do backend hospedado no Render
-//export const API_BASE_URL = 'https://inflateiq.onrender.com/api';
-export const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = 'https://inflateiq.onrender.com/api';
+//export const API_BASE_URL = 'http://localhost:8080/api';
 
 
 // ==========================================
