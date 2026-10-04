@@ -1,5 +1,9 @@
+import { obterToken } from './auth';
+
 // URL do backend hospedado no Render
-export const API_BASE_URL = 'https://inflateiq.onrender.com/api';
+//export const API_BASE_URL = 'https://inflateiq.onrender.com/api';
+export const API_BASE_URL = 'http://localhost:8080/api';
+
 
 // ==========================================
 // INTERFACES (DTOs)
@@ -49,6 +53,11 @@ export interface DetalhamentoCategoriaDTO {
   inflacaoAcumuladaCategoriaPercentual: number;
 }
 
+export interface ItensAvisoDesconsideradosDTO {
+  textoPrefixo?: string;
+  itens?: string[];
+}
+
 export interface CalculoInflacaoResponseDTO {
   inflacaoPessoalPercentual: number;
   inflacaoOficialIpcaPercentual: number;
@@ -59,7 +68,26 @@ export interface CalculoInflacaoResponseDTO {
   dataInicioCalculada: string;
   dataFimCalculada: string;
   mensagemAviso?: string;
+  itensAvisoDesconsiderados?: ItensAvisoDesconsideradosDTO; // <-- Adicionar esta linha
   detalhamento: DetalhamentoCategoriaDTO[];
+}
+
+export interface ItemHistoricoDTO {
+  categoriaId: string;
+  nomeCategoria: string;
+  valorGasto: number;
+}
+
+export interface HistoricoCalculoDTO {
+  id: number;
+  dataConsulta: string;
+  dataInicio: string;
+  dataFim: string;
+  inflacaoPessoalPercentual: number;
+  inflacaoOficialIpcaPercentual: number;
+  custoTotalInicial: number;
+  custoTotalRecomposto: number;
+  itens: ItemHistoricoDTO[];
 }
 
 // ==========================================
@@ -127,9 +155,19 @@ export async function buscarCategoriasValidas(inicio: string, fim: string): Prom
 export async function calcularInflacaoPessoal(
   payload: CalculoInflacaoRequestDTO
 ): Promise<CalculoInflacaoResponseDTO> {
+  const token = obterToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/inflacao-pessoal/calcular`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
 
@@ -151,4 +189,26 @@ export async function sincronizarPeriodoIpca(periodo: string): Promise<string> {
     throw new Error('Falha ao sincronizar dados com IBGE.');
   }
   return response.text();
+}
+
+export async function buscarHistoricoCalculos(): Promise<HistoricoCalculoDTO[]> {
+  const token = obterToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/inflacao-pessoal/historico`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao carregar o histórico de cálculos.');
+  }
+
+  return response.json();
 }

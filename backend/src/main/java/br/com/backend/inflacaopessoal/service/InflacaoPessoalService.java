@@ -1,14 +1,24 @@
 package br.com.backend.inflacaopessoal.service;
 
+import br.com.backend.auth.entity.HistoricoCalculoInflacaoEntity;
+import br.com.backend.auth.entity.HistoricoCalculoItemEntity;
+import br.com.backend.auth.entity.UsuarioEntity;
+import br.com.backend.auth.repository.HistoricoCalculoInflacaoRepository;
+import br.com.backend.auth.repository.UsuarioRepository;
 import br.com.backend.inflacaopessoal.client.IbgeClient;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoRequestDTO;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoResponseDTO;
 import br.com.backend.inflacaopessoal.dto.CategoriaDTO;
+import br.com.backend.inflacaopessoal.dto.HistoricoResumoDTO;
 import br.com.backend.inflacaopessoal.dto.IbgeGrupoDTO;
+import br.com.backend.inflacaopessoal.dto.ItemHistoricoDTO;
 import br.com.backend.inflacaopessoal.entity.CategoriaIpcaEntity;
 import br.com.backend.inflacaopessoal.entity.HistoricoCategoriaIpcaEntity;
 import br.com.backend.inflacaopessoal.repository.CategoriaIpcaRepository;
 import br.com.backend.inflacaopessoal.repository.HistoricoCategoriaIpcaRepository;
+
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +39,19 @@ public class InflacaoPessoalService {
     private final IbgeClient ibgeClient;
     private final CategoriaIpcaRepository categoriaRepository;
     private final HistoricoCategoriaIpcaRepository historicoRepository;
+    private final HistoricoCalculoInflacaoRepository historicoCalculoRepository;
+    private final UsuarioRepository usuarioRepository; // Adicionei a referência ao repositório de usuários
 
     public InflacaoPessoalService(IbgeClient ibgeClient, 
                                   CategoriaIpcaRepository categoriaRepository, 
-                                  HistoricoCategoriaIpcaRepository historicoRepository) {
+                                  HistoricoCategoriaIpcaRepository historicoRepository,
+                                  HistoricoCalculoInflacaoRepository historicoCalculoRepository,
+                                  UsuarioRepository usuarioRepository) {
         this.ibgeClient = ibgeClient;
         this.categoriaRepository = categoriaRepository;
         this.historicoRepository = historicoRepository;
+        this.historicoCalculoRepository = historicoCalculoRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public String sincronizarUltimoMesIbge() {
@@ -268,6 +284,24 @@ public class InflacaoPessoalService {
 
         String mensagemAvisoFinal = frasesAviso.isEmpty() ? null : String.join(" ", frasesAviso);
 
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        UsuarioEntity usuarioLogado = usuarioRepository.findByEmail(email).orElseThrow();
+
+            HistoricoCalculoInflacaoEntity historico = new HistoricoCalculoInflacaoEntity(
+                    usuarioLogado,
+                    inicio,
+                    fim,
+                    inflacaoPessoalFinal,
+                    gastoTotalInicial,
+                    gastoTotalRecompostoSum
+            );
+
+            for (CalculoInflacaoRequestDTO.ItemGastoDTO item : request.itensGasto()) {
+                historico.adicionarItem(new HistoricoCalculoItemEntity(item.categoriaId(), item.valorGasto()));
+            }
+
+            historicoCalculoRepository.save(historico);
+
         return new CalculoInflacaoResponseDTO(
                 inflacaoPessoalFinal,
                 ipcaGeralAcumulado,
@@ -324,5 +358,29 @@ public class InflacaoPessoalService {
         return categoriaRepository.findAll().stream()
                 .map(c -> new CategoriaDTO(c.getId(), c.getNome()))
                 .toList();
+    }
+
+    public List<HistoricoResumoDTO> buscarHistoricoUsuarioLogado(String email) {
+        UsuarioEntity usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        List<HistoricoCalculoInflacaoEntity> historicos = 
+                historicoCalculoRepository.findTop10ByUsuario_IdOrderByDataConsultaDesc(usuario.getId());
+
+        return historicos.stream().map(h -> new HistoricoResumoDTO(
+                h.getId(),
+                h.getDataConsulta(),
+                h.getDataInicio(),
+                h.getDataFim(),
+                h.getInflacaoPessoalPercentual(),
+                h.getInflacaoOficialIpcaPercentual(), // Busca do banco
+                h.getCustoTotalInicial(),
+                h.getCustoTotalRecomposto(),
+                h.getItens().stream().map(i -> new ItemHistoricoDTO(
+                        i.getCategoriaId(),           // Busca o ID direto da entidade
+                        i.getNomeCategoria(),         // Busca o Nome direto da entidade
+                        i.getValorGasto()
+                )).toList()
+        )).toList();
     }
 }

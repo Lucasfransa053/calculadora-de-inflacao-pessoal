@@ -26,10 +26,12 @@ public class AuthService {
 
     private final UsuarioRepository repository;
     private final PasswordEncoder encoder;
+    private final JwtService jwtService;
 
-    public AuthService(UsuarioRepository repository, PasswordEncoder encoder) {
+    public AuthService(UsuarioRepository repository, PasswordEncoder encoder, JwtService jwtService) {
         this.repository = repository;
         this.encoder = encoder;
+        this.jwtService = jwtService;
     }
 
     public UsuarioResponseDTO registrar(RegistroRequestDTO req) {
@@ -53,23 +55,22 @@ public class AuthService {
 
         try {
             UsuarioEntity salvo = repository.save(new UsuarioEntity(nome, email, encoder.encode(senha)));
-            return new UsuarioResponseDTO(salvo.getEmail(), salvo.getNome());
+            return new UsuarioResponseDTO(salvo.getId(),salvo.getEmail(), salvo.getNome());
         } catch (DataIntegrityViolationException e) {
             // duas requisições simultâneas com o mesmo e-mail
             throw new AuthException(HttpStatus.CONFLICT, MSG_EMAIL_EM_USO);
         }
     }
 
-    public UsuarioResponseDTO entrar(LoginRequestDTO req) {
+    public String entrar(LoginRequestDTO req) {
         String email = normalizar(req.email());
         String senha = req.senha() == null ? "" : req.senha();
 
-        // mesma mensagem para "e-mail não existe" e "senha errada"
         UsuarioEntity encontrado = repository.findByEmail(email)
                 .filter(u -> encoder.matches(senha, u.getSenhaHash()))
                 .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, MSG_CREDENCIAIS));
 
-        return new UsuarioResponseDTO(encontrado.getEmail(), encontrado.getNome());
+        return jwtService.gerarToken(encontrado.getEmail());
     }
 
     private static String normalizar(String email) {

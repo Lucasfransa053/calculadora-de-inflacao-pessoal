@@ -3,10 +3,12 @@ package br.com.backend.inflacaopessoal.controller;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoRequestDTO;
 import br.com.backend.inflacaopessoal.dto.CalculoInflacaoResponseDTO;
 import br.com.backend.inflacaopessoal.dto.CategoriaDTO;
+import br.com.backend.inflacaopessoal.dto.HistoricoResumoDTO;
 import br.com.backend.inflacaopessoal.service.InflacaoPessoalService;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -57,5 +59,12 @@ public class InflacaoPessoalController {
     public ResponseEntity<CalculoInflacaoResponseDTO> calcular(@RequestBody CalculoInflacaoRequestDTO request) {
         CalculoInflacaoResponseDTO resultado = inflacaoPessoalService.calcularInflacaoPessoal(request);
         return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/historico")
+    public ResponseEntity<List<HistoricoResumoDTO>> listarHistorico(Authentication authentication) {
+        String email = authentication.getName(); // Obtém o e-mail do token JWT/usuário logado
+        List<HistoricoResumoDTO> historico = inflacaoPessoalService.buscarHistoricoUsuarioLogado(email);
+        return ResponseEntity.ok(historico);
     }
 }

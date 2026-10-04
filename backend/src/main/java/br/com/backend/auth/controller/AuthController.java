@@ -4,7 +4,11 @@ import br.com.backend.auth.dto.LoginRequestDTO;
 import br.com.backend.auth.dto.RegistroRequestDTO;
 import br.com.backend.auth.dto.UsuarioResponseDTO;
 import br.com.backend.auth.service.AuthService;
+
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +29,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public UsuarioResponseDTO entrar(@RequestBody LoginRequestDTO request) {
-        return authService.entrar(request);
+    public ResponseEntity<Map<String, String>> entrar(@RequestBody LoginRequestDTO request) {
+        String token = authService.entrar(request);
+        return ResponseEntity.ok(Map.of("token", token));
     }
 }

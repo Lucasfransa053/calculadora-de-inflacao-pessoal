@@ -4,17 +4,21 @@ import { API_BASE_URL } from './api';
 export interface Usuario {
   email: string;
   nome: string;
+  token?: string;
 }
 
 const CHAVE_SESSAO = '@sessao';
 
-async function chamarAuth(caminho: 'login' | 'registro', corpo: object): Promise<Usuario> {
+/**
+ * Realiza o login no backend, obtém o Token JWT e salva a sessão.
+ */
+export async function autenticar(email: string, senha: string): Promise<Usuario> {
   let resposta: Response;
   try {
-    resposta = await fetch(`${API_BASE_URL}/auth/${caminho}`, {
+    resposta = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(corpo),
+      body: JSON.stringify({ email, senha }),
     });
   } catch {
     throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
@@ -22,39 +26,69 @@ async function chamarAuth(caminho: 'login' | 'registro', corpo: object): Promise
 
   if (!resposta.ok) {
     const erro = await resposta.json().catch(() => null);
-    throw new Error(erro?.message || `Erro no servidor (status ${resposta.status}).`);
+    throw new Error(erro?.message || `E-mail ou senha incorretos (status ${resposta.status}).`);
   }
 
-  const dados = (await resposta.json()) as Usuario;
-  return { email: dados.email, nome: dados.nome };
+  // Backend retorna: { token: "..." }
+  const dados = (await resposta.json()) as { token: string };
+
+  const usuario: Usuario = {
+    email: email,
+    nome: email.split('@')[0], // Nome extraído do e-mail
+    token: dados.token,
+  };
+
+  salvarSessao(usuario);
+  return usuario;
 }
 
-/** Lança Error com a mensagem a exibir na tela quando e-mail/senha estão incorretos. */
-export function autenticar(email: string, senha: string): Promise<Usuario> {
-  return chamarAuth('login', { email, senha });
+/**
+ * Cria a conta no backend e em seguida realiza o login para obter o token JWT.
+ */
+export async function criarConta(nome: string, email: string, senha: string): Promise<Usuario> {
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${API_BASE_URL}/auth/registro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, email, senha }),
+    });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+  }
+
+  if (!resposta.ok) {
+    const erro = await resposta.json().catch(() => null);
+    throw new Error(erro?.message || `Erro no servidor (${resposta.status}).`);
+  }
+
+  // Após cadastrar com sucesso, faz o login para obter o token JWT
+  const usuarioLogado = await autenticar(email, senha);
+  // Garante que usamos o nome completo informado no cadastro
+  const usuarioComNome: Usuario = { ...usuarioLogado, nome };
+  salvarSessao(usuarioComNome);
+
+  return usuarioComNome;
 }
 
-/** Cria a conta no backend. Lança Error com a mensagem a exibir (ex.: e-mail já cadastrado). */
-export function criarConta(nome: string, email: string, senha: string): Promise<Usuario> {
-  return chamarAuth('registro', { nome, email, senha });
-}
-
-// ---- Sessão (persistida só na Web, como já é feito com tema e aba ativa) ----
+// ---- Gestão de Sessão e Token ----
 
 export function lerSessao(): Usuario | null {
   try {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const bruto = window.localStorage.getItem(CHAVE_SESSAO);
       if (!bruto) return null;
-      const dados = JSON.parse(bruto) as Partial<Usuario>;
-      if (typeof dados.email === 'string' && typeof dados.nome === 'string') {
-        return { email: dados.email, nome: dados.nome };
-      }
+      return JSON.parse(bruto) as Usuario;
     }
   } catch {
-    // armazenamento indisponível ou conteúdo inválido: segue sem sessão
+    // armazenamento indisponível ou conteúdo inválido
   }
   return null;
+}
+
+export function obterToken(): string | null {
+  const usuario = lerSessao();
+  return usuario?.token || null;
 }
 
 export function salvarSessao(usuario: Usuario): void {

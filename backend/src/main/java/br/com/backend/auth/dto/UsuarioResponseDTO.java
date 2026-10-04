@@ -1,4 +1,3 @@
 package br.com.backend.auth.dto;
 
-/** Nunca inclui a senha nem o hash. */
-public record UsuarioResponseDTO(String email, String nome) {}
+public record UsuarioResponseDTO(Long id, String email, String nome) {}
