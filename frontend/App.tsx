@@ -1,7 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   Animated,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -42,10 +43,45 @@ export default function App() {
 function Root() {
   const { isDark } = useTheme();
   const { usuario, sair } = useAuth();
-  const [tokenRedefinicao, setTokenRedefinicao] = useState<string | null>(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-    return new URLSearchParams(window.location.search).get('token');
-  });
+  const [tokenRedefinicao, setTokenRedefinicao] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tokenDaUrl = (url: string | null): string | null => {
+      if (!url) return null;
+      try {
+        return new URL(url).searchParams.get('token');
+      } catch {
+        // Fallback para ambientes que não suportem a URL completa.
+        const match = url.match(/[?&]token=([^&#]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+      }
+    };
+
+    let ativo = true;
+    const abrirLinkInicial = async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        let token = tokenDaUrl(initialUrl);
+        if (!token && Platform.OS === 'web' && typeof window !== 'undefined') {
+          token = new URLSearchParams(window.location.search).get('token');
+        }
+        if (ativo && token) setTokenRedefinicao(token);
+      } catch {
+        // Mantém o app utilizável mesmo se não for possível ler o link inicial.
+      }
+    };
+
+    void abrirLinkInicial();
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      const token = tokenDaUrl(url);
+      if (token) setTokenRedefinicao(token);
+    });
+
+    return () => {
+      ativo = false;
+      subscription.remove();
+    };
+  }, []);
 
   const concluirRedefinicao = () => {
     sair();

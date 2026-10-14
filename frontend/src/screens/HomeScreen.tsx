@@ -14,7 +14,7 @@ export default function HomeScreen({ onSelecionar }: Props) {
   const { usuario } = useAuth();
   const primeiroNome = usuario?.nome?.trim().split(/\s+/)[0] ?? '';
   const desktop = useIsDesktop();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, desktop), [colors, desktop]);
   const [historico, setHistorico] = useState<HistoricoCalculoDTO[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(true);
 
@@ -139,10 +139,10 @@ export default function HomeScreen({ onSelecionar }: Props) {
   );
 }
 
-const createStyles = (c: Colors) => StyleSheet.create({
+const createStyles = (c: Colors, desktop: boolean) => StyleSheet.create({
   scroll: { flexGrow: 1 },
-  conteudo: { width: '100%', maxWidth: 1040, alignSelf: 'center', padding: 24, paddingTop: 32, paddingBottom: 48 },
-  conteudoDesktop: { paddingHorizontal: 52, paddingTop: 44 },
+  conteudo: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingHorizontal: desktop ? 52 : 18, paddingTop: desktop ? 44 : 24, paddingBottom: 36 },
+  conteudoDesktop: {},
   cabecalhoLinha: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 },
   acoesCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   botaoModo: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border },
@@ -154,15 +154,15 @@ const createStyles = (c: Colors) => StyleSheet.create({
   subtitulo: { color: c.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 8, maxWidth: 600 },
   seloCabecalho: { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, marginTop: 8 },
   seloTexto: { color: c.textSecondary, fontSize: 9, letterSpacing: 1, fontWeight: '800' },
-  destaque: { backgroundColor: c.primary, borderRadius: 22, padding: 24, marginBottom: 28, flexDirection: 'row', alignItems: 'center', gap: 20, overflow: 'hidden' },
-  destaqueTexto: { flex: 1 },
-  destaqueEtiqueta: { color: '#554900', fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginBottom: 10 },
-  destaqueTitulo: { color: '#0A0A0A', fontSize: 23, lineHeight: 28, fontWeight: '800', letterSpacing: -0.5, maxWidth: 460 },
-  destaqueSubtitulo: { color: 'rgba(10,10,10,0.72)', fontSize: 13, lineHeight: 19, marginTop: 8, maxWidth: 510 },
-  ilustracao: { width: 210, borderRadius: 16, padding: 16, backgroundColor: 'rgba(10,10,10,0.92)' },
+  destaque: { backgroundColor: c.primary, borderRadius: 22, padding: desktop ? 30 : 22, marginBottom: desktop ? 28 : 24, flexDirection: desktop ? 'row' : 'column', alignItems: desktop ? 'center' : 'stretch', gap: desktop ? 24 : 20, overflow: 'hidden', width: '100%' },
+  destaqueTexto: { flex: 1, minWidth: 0, width: '100%' },
+  destaqueEtiqueta: { color: '#554900', fontSize: desktop ? 9 : 10, fontWeight: '900', letterSpacing: 1.1, marginBottom: 10, lineHeight: 15 },
+  destaqueTitulo: { color: '#0A0A0A', fontSize: desktop ? 27 : 25, lineHeight: desktop ? 33 : 31, fontWeight: '800', letterSpacing: -0.5, maxWidth: desktop ? 460 : 560, flexShrink: 1 },
+  destaqueSubtitulo: { color: 'rgba(10,10,10,0.72)', fontSize: 14, lineHeight: 21, marginTop: 10, maxWidth: 510 },
+  ilustracao: { width: desktop ? 240 : '100%', maxWidth: desktop ? 240 : undefined, alignSelf: 'stretch', borderRadius: 16, padding: 16, backgroundColor: 'rgba(10,10,10,0.92)' },
   barraGraficoLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 5 },
   graficoLabel: { color: '#A3A3A3', fontSize: 9, width: 34, fontWeight: '800', letterSpacing: 0.6 },
-  barraGrafico: { height: 8, borderRadius: 10 },
+  barraGrafico: { height: 8, borderRadius: 10, flexGrow: 1, maxWidth: 170 },
   barraIpca: { width: 86, backgroundColor: '#A3A3A3' },
   barraVoce: { width: 126, backgroundColor: c.primary },
   graficoLegenda: { color: '#D4D4D4', fontSize: 9, marginTop: 11 },

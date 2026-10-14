@@ -17,7 +17,23 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFE100"
       },
-      "package": "com.guilhermecosm.calculadorainflacaopessoal"
+      "package": "com.guilhermecosm.calculadorainflacaopessoal",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "inflateiq",
+              "host": "redefinir-senha"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -30,6 +46,7 @@
       "eas": {
         "projectId": "9465f8dd-38d7-48eb-8255-e7eab00004b2"
       }
-    }
+    },
+    "scheme": "inflateiq"
   }
 }
