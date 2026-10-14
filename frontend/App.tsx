@@ -13,6 +13,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import CalculadoraIpcaScreen from './src/screens/CalculadoraIpcaScreen';
 import InflacaoPessoalScreen from './src/screens/InflacaoPessoalScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import PasswordResetScreen from './src/screens/PasswordResetScreen';
+import HomeScreen from './src/screens/HomeScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { BrandMark } from './src/components/Brand';
 import { UserBar, UserCard } from './src/components/UserPanel';
@@ -22,7 +24,7 @@ import { Colors, ThemeProvider, useTheme } from './src/theme';
 const SIDEBAR_WIDTH = 350;
 const DRAWER_WIDTH = 280;
 
-type Tela = 'oficial' | 'pessoal';
+type Tela = 'inicio' | 'oficial' | 'pessoal';
 
 export default function App() {
   return (
@@ -39,11 +41,28 @@ export default function App() {
 // Só mostra a home depois do login; ao sair, volta para a tela de login.
 function Root() {
   const { isDark } = useTheme();
-  const { usuario } = useAuth();
+  const { usuario, sair } = useAuth();
+  const [tokenRedefinicao, setTokenRedefinicao] = useState<string | null>(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('token');
+  });
+
+  const concluirRedefinicao = () => {
+    sair();
+    setTokenRedefinicao(null);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  };
+
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      {usuario ? <AppContent /> : <LoginScreen />}
+      {tokenRedefinicao
+        ? <PasswordResetScreen token={tokenRedefinicao} onDone={concluirRedefinicao} />
+        : usuario ? <AppContent /> : <LoginScreen />}
     </>
   );
 }
@@ -70,8 +89,9 @@ function Navegacao({
   styles: ReturnType<typeof createStyles>;
 }) {
   const itens: { id: Tela; icone: string; rotulo: string }[] = [
-    { id: 'oficial', icone: '📊', rotulo: 'IPCA Oficial' },
-    { id: 'pessoal', icone: '🛒', rotulo: 'Inflação Pessoal' },
+    { id: 'inicio', icone: '⌂', rotulo: 'Início' },
+    { id: 'oficial', icone: '↗', rotulo: 'IPCA Oficial' },
+    { id: 'pessoal', icone: '◉', rotulo: 'Inflação Pessoal' },
   ];
   return (
     <View>
@@ -99,16 +119,8 @@ function AppContent() {
   const desktop = useIsDesktop();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Inicializa o estado lendo o localStorage (na Web) ou usando 'oficial' (Calculadora IPCA) como padrão
-  const [telaAtiva, setTelaAtiva] = useState<Tela>(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const salva = localStorage.getItem('@aba_ativa');
-      if (salva === 'oficial' || salva === 'pessoal') {
-        return salva;
-      }
-    }
-    return 'oficial';
-  });
+  // Cada login começa na home, onde a pessoa escolhe uma calculadora.
+  const [telaAtiva, setTelaAtiva] = useState<Tela>('inicio');
 
   const [menuAberto, setMenuAberto] = useState(false);
 
@@ -141,7 +153,11 @@ function AppContent() {
     if (menuAberto) toggleMenu(false);
   };
 
-  const conteudo = telaAtiva === 'oficial' ? <CalculadoraIpcaScreen /> : <InflacaoPessoalScreen />;
+  const conteudo = telaAtiva === 'inicio'
+    ? <HomeScreen onSelecionar={selecionarTela} />
+    : telaAtiva === 'oficial'
+      ? <CalculadoraIpcaScreen />
+      : <InflacaoPessoalScreen />;
 
   // ---------- Computador: sidebar fixa, com usuário e "Sair" no rodapé ----------
   if (desktop) {

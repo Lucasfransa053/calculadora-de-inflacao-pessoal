@@ -9,6 +9,40 @@ export interface Usuario {
 
 const CHAVE_SESSAO = '@sessao';
 
+export async function solicitarRedefinicaoSenha(email: string): Promise<void> {
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${API_BASE_URL}/auth/password-reset/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+  }
+  if (!resposta.ok) {
+    const erro = await resposta.json().catch(() => null);
+    throw new Error(erro?.message || 'Não foi possível solicitar a redefinição. Tente novamente.');
+  }
+}
+
+export async function redefinirSenha(token: string, novaSenha: string): Promise<void> {
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${API_BASE_URL}/auth/password-reset/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, novaSenha }),
+    });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+  }
+  if (!resposta.ok) {
+    const erro = await resposta.json().catch(() => null);
+    throw new Error(erro?.message || 'Não foi possível alterar a senha. Solicite um novo link.');
+  }
+}
+
 /**
  * Realiza o login no backend, obtém o Token JWT e salva a sessão.
  */
@@ -29,12 +63,12 @@ export async function autenticar(email: string, senha: string): Promise<Usuario>
     throw new Error(erro?.message || `E-mail ou senha incorretos (status ${resposta.status}).`);
   }
 
-  // Backend retorna: { token: "..." }
-  const dados = (await resposta.json()) as { token: string };
+  // Backend retorna o token e o nome completo cadastrado.
+  const dados = (await resposta.json()) as { token: string; nome?: string };
 
   const usuario: Usuario = {
     email: email,
-    nome: email.split('@')[0], // Nome extraído do e-mail
+    nome: dados.nome?.trim() || email.split('@')[0],
     token: dados.token,
   };
 

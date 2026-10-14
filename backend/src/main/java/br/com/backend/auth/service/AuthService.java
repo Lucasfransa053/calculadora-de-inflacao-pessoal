@@ -1,6 +1,7 @@
 package br.com.backend.auth.service;
 
 import br.com.backend.auth.dto.LoginRequestDTO;
+import br.com.backend.auth.dto.LoginResponseDTO;
 import br.com.backend.auth.dto.RegistroRequestDTO;
 import br.com.backend.auth.dto.UsuarioResponseDTO;
 import br.com.backend.auth.entity.UsuarioEntity;
@@ -62,7 +63,7 @@ public class AuthService {
         }
     }
 
-    public String entrar(LoginRequestDTO req) {
+    public LoginResponseDTO entrar(LoginRequestDTO req) {
         String email = normalizar(req.email());
         String senha = req.senha() == null ? "" : req.senha();
 
@@ -70,7 +71,7 @@ public class AuthService {
                 .filter(u -> encoder.matches(senha, u.getSenhaHash()))
                 .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, MSG_CREDENCIAIS));
 
-        return jwtService.gerarToken(encontrado.getEmail());
+        return new LoginResponseDTO(jwtService.gerarToken(encontrado.getEmail()), encontrado.getNome());
     }
 
     private static String normalizar(String email) {

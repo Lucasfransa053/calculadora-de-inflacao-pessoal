@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const AMARELO = '#FFE100';
 
@@ -49,7 +50,7 @@ export const dark: Colors = {
   warnBadgeBg: 'rgba(245, 158, 11, 0.2)',
   warnBadgeText: '#FEF08A',
   overlay: 'rgba(0, 0, 0, 0.7)',
-  cardShadow: '0px 0px 0px rgba(0, 0, 0, 0)',
+  cardShadow: '0px 12px 32px rgba(0, 0, 0, 0.45)',
   buttonShadow: '0px 6px 20px rgba(255, 225, 0, 0.18)',
 };
 
@@ -107,15 +108,40 @@ function lerTemaSalvo(): 'light' | 'dark' | null {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const sistema = useColorScheme(); // segue o tema do celular/navegador por padrão
   const [escolhido, setEscolhido] = useState<'light' | 'dark' | null>(lerTemaSalvo);
+  const pessoaAlterouTema = useRef(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    let ativo = true;
+    AsyncStorage.getItem(CHAVE)
+      .then((valor) => {
+        if (ativo && !pessoaAlterouTema.current && (valor === 'light' || valor === 'dark')) {
+          setEscolhido(valor);
+        }
+      })
+      .catch(() => {
+        // Se o armazenamento estiver indisponivel, mantem o tema do sistema.
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const isDark = (escolhido ?? (sistema === 'light' ? 'light' : 'dark')) === 'dark';
 
   const toggleTheme = useCallback(() => {
     const novo = isDark ? 'light' : 'dark';
+    pessoaAlterouTema.current = true;
     setEscolhido(novo);
     try {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.localStorage.setItem(CHAVE, novo);
+      } else {
+        void AsyncStorage.setItem(CHAVE, novo).catch(() => {
+          // Mantem a alteracao na sessao se nao for possivel salvar no aparelho.
+        });
       }
     } catch {
       // ignora

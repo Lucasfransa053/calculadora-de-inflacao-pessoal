@@ -18,6 +18,7 @@ import { Colors, useTheme } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useIsDesktop } from '../hooks/useLayout';
 import { BrandMark } from '../components/Brand';
+import { solicitarRedefinicaoSenha } from '../services/auth';
 
 // Remove o contorno padrão do navegador nos campos
 const semContorno = (
@@ -32,8 +33,9 @@ export default function LoginScreen() {
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar');
+  const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'recuperar'>('entrar');
   const cadastro = modo === 'cadastrar';
+  const recuperar = modo === 'recuperar';
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -42,6 +44,7 @@ export default function LoginScreen() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [foco, setFoco] = useState<'nome' | 'email' | 'senha' | 'confirmar' | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
   const emailRef = useRef<TextInput>(null);
@@ -52,9 +55,25 @@ export default function LoginScreen() {
     if (carregando) return;
     setModo(cadastro ? 'entrar' : 'cadastrar');
     setErro(null);
+    setSucesso(null);
     setSenha('');
     setConfirmar('');
     setMostrarSenha(false);
+  }
+
+  function abrirRecuperacao() {
+    if (carregando) return;
+    setModo('recuperar');
+    setErro(null);
+    setSucesso(null);
+    setSenha('');
+  }
+
+  function voltarAoLogin() {
+    if (carregando) return;
+    setModo('entrar');
+    setErro(null);
+    setSucesso(null);
   }
 
   async function handleEnviar() {
@@ -77,16 +96,25 @@ export default function LoginScreen() {
         setErro('As senhas não conferem.');
         return;
       }
-    } else if (!email.trim() || !senha) {
-      setErro('Informe o e-mail e a senha.');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+      setErro('Informe um e-mail válido.');
+      return;
+    } else if (!recuperar && !senha) {
+      setErro('Informe sua senha.');
       return;
     }
 
     setErro(null);
+    setSucesso(null);
     setCarregando(true);
 
     try {
-      if (cadastro) {
+      if (recuperar) {
+        await solicitarRedefinicaoSenha(email.trim());
+        setSucesso('Se esse e-mail estiver cadastrado, você receberá uma mensagem com as instruções para redefinir a senha.');
+        setCarregando(false);
+        return;
+      } else if (cadastro) {
         await cadastrar(nome.trim(), email.trim(), senha);
       } else {
         await entrar(email.trim(), senha);
@@ -114,13 +142,15 @@ export default function LoginScreen() {
   const formulario = (
     <View style={styles.card}>
       <Text style={styles.cardTitulo}>
-        {cadastro ? 'Criar conta' : 'Entrar'}
+        {cadastro ? 'Criar conta' : recuperar ? 'Esqueci minha senha' : 'Entrar'}
       </Text>
 
       <Text style={styles.cardSubtitulo}>
         {cadastro
           ? 'Cadastre-se para usar a calculadora.'
-          : 'Acesse sua conta para continuar.'}
+          : recuperar
+            ? 'Informe seu e-mail e enviaremos as instruções de recuperação.'
+            : 'Acesse sua conta para continuar.'}
       </Text>
 
       {erro && (
@@ -129,11 +159,17 @@ export default function LoginScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={styles.erroTitulo}>
-              {cadastro ? 'Não foi possível criar a conta' : 'Não foi possível entrar'}
+              {cadastro ? 'Não foi possível criar a conta' : recuperar ? 'Não foi possível enviar o link' : 'Não foi possível entrar'}
             </Text>
 
             <Text style={styles.erroTexto}>{erro}</Text>
           </View>
+        </View>
+      )}
+
+      {sucesso && (
+        <View style={styles.sucessoBox} accessibilityRole="alert">
+          <Text style={styles.sucessoTexto}>{sucesso}</Text>
         </View>
       )}
 
@@ -183,9 +219,9 @@ export default function LoginScreen() {
         />
       </View>
 
-      <Text style={styles.label}>Senha</Text>
+      {!recuperar && <Text style={styles.label}>Senha</Text>}
 
-      <View style={[styles.campo, bordaCampo('senha')]}>
+      {!recuperar && <View style={[styles.campo, bordaCampo('senha')]}>
         <TextInput
           ref={senhaRef}
           style={[styles.input, semContorno]}
@@ -213,7 +249,18 @@ export default function LoginScreen() {
             {mostrarSenha ? 'Ocultar' : 'Mostrar'}
           </Text>
         </TouchableOpacity>
-      </View>
+      </View>}
+
+      {!cadastro && !recuperar && (
+        <TouchableOpacity
+          style={styles.esqueciLinha}
+          onPress={abrirRecuperacao}
+          disabled={carregando}
+          accessibilityRole="button"
+        >
+          <Text style={styles.trocaLink}>Esqueci minha senha</Text>
+        </TouchableOpacity>
+      )}
 
       {cadastro && (
         <>
@@ -255,24 +302,24 @@ export default function LoginScreen() {
           <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={styles.botaoTexto}>
-            {cadastro ? 'Criar conta' : 'Entrar'}
+            {cadastro ? 'Criar conta' : recuperar ? 'Enviar instruções' : 'Entrar'}
           </Text>
         )}
       </TouchableOpacity>
 
       <View style={styles.trocaLinha}>
         <Text style={styles.trocaTexto}>
-          {cadastro ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
+          {recuperar ? 'Lembrou sua senha?' : cadastro ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
         </Text>
 
         <TouchableOpacity
-          onPress={alternarModo}
+          onPress={recuperar ? voltarAoLogin : alternarModo}
           disabled={carregando}
           hitSlop={8}
           accessibilityRole="button"
         >
           <Text style={styles.trocaLink}>
-            {cadastro ? 'Entrar' : 'Criar conta'}
+            {recuperar ? 'Entrar' : cadastro ? 'Entrar' : 'Criar conta'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -630,6 +677,11 @@ const createStyles = (c: Colors) =>
       marginTop: 20,
     },
 
+    esqueciLinha: {
+      alignSelf: 'flex-end',
+      marginTop: 12,
+    },
+
     trocaTexto: {
       color: c.textSecondary,
       fontSize: 14,
@@ -688,5 +740,20 @@ const createStyles = (c: Colors) =>
       fontSize: 13,
       lineHeight: 19,
       marginTop: 2,
+    },
+
+    sucessoBox: {
+      backgroundColor: c.success + '18',
+      borderWidth: 1,
+      borderColor: c.success,
+      borderRadius: 14,
+      padding: 14,
+      marginTop: 12,
+    },
+
+    sucessoTexto: {
+      color: c.success,
+      fontSize: 13,
+      lineHeight: 19,
     },
   });
