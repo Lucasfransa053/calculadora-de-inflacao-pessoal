@@ -1,15 +1,20 @@
+
 package br.com.backend.auth.controller;
 
 import br.com.backend.auth.dto.LoginRequestDTO;
 import br.com.backend.auth.dto.LoginResponseDTO;
 import br.com.backend.auth.dto.RegistroRequestDTO;
 import br.com.backend.auth.dto.UsuarioResponseDTO;
+import br.com.backend.auth.dto.MessageResponseDTO;
+import br.com.backend.auth.dto.PasswordResetRequestDTO;
+import br.com.backend.auth.dto.PasswordResetConfirmDTO;
 import br.com.backend.auth.service.AuthService;
 import br.com.backend.auth.service.PasswordResetService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/api/auth")
