@@ -31,97 +31,231 @@ interface GrupoUI {
   match: (nomeLimpo: string, id: string) => boolean;
 }
 
+interface SubgrupoUI {
+  id: string;
+  nome: string;
+  icone: string;
+  match: (nome: string) => boolean;
+}
+
 const removerAcentos = (texto: string) => {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 };
 
+// Compara palavras/frases completas. Evita falsos positivos como "cama" dentro de "camarao".
+const temTermo = (texto: string, termo: string) => {
+  const textoNormalizado = removerAcentos(texto).replace(/[^a-z0-9]+/g, ' ').trim();
+  const termoNormalizado = removerAcentos(termo).replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!termoNormalizado) return false;
+  const textoComLimites = ` ${textoNormalizado} `;
+  return textoComLimites.includes(` ${termoNormalizado} `) ||
+    textoComLimites.includes(` ${termoNormalizado}s `);
+};
+
 const formatarNomeCategoria = (nome: string) => {
-  return nome.replace(/^[0-9]+\.\s*/, '');
+  const nomeFormatado = String(nome ?? '')
+    .replace(/^[0-9]+\.\s*/, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s*([’'])\s*/g, '$1');
+
+  // Corrige a nomenclatura apenas na apresentação; IDs e nomes enviados à API não mudam.
+  return nomeFormatado.replace(/\btelevisor(?:es)?\b/gi, (termo) => {
+    const plural = /^televisores$/i.test(termo);
+    const inicialMaiuscula = termo[0] === termo[0].toUpperCase();
+    const substituto = plural ? 'televisões' : 'televisão';
+    return inicialMaiuscula
+      ? substituto.charAt(0).toUpperCase() + substituto.slice(1)
+      : substituto;
+  });
+};
+
+const chaveNomeCategoriaSemFormatar = (nome: string) =>
+  removerAcentos(String(nome ?? '')).replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Chave usada apenas para comparar nomes na interface; os IDs oficiais são preservados.
+const chaveNomeCategoria = (nome: string) =>
+  removerAcentos(formatarNomeCategoria(nome)).replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Remove apenas IDs repetidos na resposta da API. A deduplicação por nome é feita
+// na lista exibida, para não descartar IDs oficiais diferentes que possam ser usados nos cálculos.
+const normalizarCategorias = (lista: CategoriaIpca[]) => {
+  const idsVistos = new Set<string>();
+  return lista.filter((categoria) => {
+    const id = String(categoria.id ?? '').trim();
+    const nome = chaveNomeCategoria(categoria.nome ?? '');
+    if (!id || !nome || idsVistos.has(id)) return false;
+    idsVistos.add(id);
+    return true;
+  });
 };
 
 const GRUPOS_PRINCIPAIS: GrupoUI[] = [
   {
-    id: '1',
-    nome: 'Alimentação e Bebidas',
-    icone: '🍔',
+    id: '1', nome: 'Alimentação e Bebidas', icone: '🍔',
     match: (n) =>
-      (n.includes('alimentac') || n.includes('arroz') || n.includes('feijao') || n.includes('carne') ||
-       n.includes('picanha') || n.includes('leite') || n.includes('biscoito') || n.includes('fruta') ||
-       n.includes('maca') || n.includes('banana') || n.includes('morango') || n.includes('peixe') ||
-       n.includes('acucar') || n.includes('refrigerante') || n.includes('suco') || n.includes('macarrao') ||
-       n.includes('pao') || n.includes('cerveja') || n.includes('queijo') || n.includes('oleo') || n.includes('cafe')) &&
-      !n.includes('combustivel'),
+      temTermo(n, 'alimentacao e bebidas') || temTermo(n, 'tuberculos') ||
+      temTermo(n, 'raizes e legumes') || temTermo(n, 'camarao') ||
+      ['arroz','feijao','carne','peixe','leite','biscoito','fruta','maca','banana','morango',
+       'acucar','refrigerante','suco','macarrao','pao','cerveja','queijo','oleo','cafe',
+       'legumes','verduras','hortalicas','ovos','farinha','massa','frango','porco','bovino']
+        .some((termo) => temTermo(n, termo)) && !temTermo(n, 'combustivel'),
   },
   {
-    id: '2',
-    nome: 'Habitação & Limpeza',
-    icone: '🏠',
+    id: '2', nome: 'Habitação e Limpeza', icone: '🏠',
     match: (n) =>
-      (n.includes('habitac') || n.includes('aluguel') || n.includes('energia eletrica') ||
-       n.includes('taxa de agua') || n.includes('gas encanado') || n.includes('gas de botijao') ||
-       n.includes('detergente') || n.includes('limpeza') || n.includes('sabao') || n.includes('condominio')) &&
-      !n.includes('gasolina'),
+      temTermo(n, 'habitacao') || temTermo(n, 'aluguel residencial') ||
+      temTermo(n, 'energia eletrica') || temTermo(n, 'taxa de agua') ||
+      temTermo(n, 'gas encanado') || temTermo(n, 'gas de botijao') ||
+      temTermo(n, 'limpeza') || temTermo(n, 'sabao') || temTermo(n, 'detergente') ||
+      temTermo(n, 'condominio') || temTermo(n, 'agua e esgoto') || temTermo(n, 'reparos'),
   },
   {
-    id: '3',
-    nome: 'Artigos de Residência',
-    icone: '🛋',
+    id: '3', nome: 'Artigos de Residência', icone: '🛋',
     match: (n) =>
-      n.includes('residencia') || n.includes('eletrodomestico') || n.includes('movel') ||
-      n.includes('tv') || n.includes('cama') || n.includes('utensilio') || n.includes('colchao') || n.includes('geladeira'),
+      ['artigos de residencia','tapete','roupa de cama','cama','colchao','eletrodomestico',
+       'maquina de lavar roupa','conserto de maquina de lavar roupa','geladeira','fogao',
+       'moveis','movel','utensilio domestico','televisor','televisao','conserto de televisor','conserto de televisao','ar condicionado','ventilador',
+       'sofa','mesa','cadeira','cortina','louca','cama mesa e banho']
+        .some((termo) => temTermo(n, termo)),
   },
   {
-    id: '4',
-    nome: 'Vestuário',
-    icone: '👕',
+    id: '4', nome: 'Vestuário', icone: '👕',
     match: (n) =>
-      n.includes('vestuario') || n.includes('roupa') || n.includes('calca') || n.includes('camisa') ||
-      n.includes('sapato') || n.includes('tenis') || n.includes('calcado') || n.includes('saia') || n.includes('cinto'),
+      ['vestuario','roupa','calca','camisa','sapato','tenis','calcado','saia','cinto',
+       'meia','tecido','confeccao','bolsa','joia','relogio de pulso','oculos de sol']
+        .some((termo) => temTermo(n, termo)) &&
+      !['roupa de cama'].some((termo) => temTermo(n, termo)),
   },
   {
-    id: '5',
-    nome: 'Transportes',
-    icone: '🚗',
+    id: '5', nome: 'Transportes', icone: '🚗',
     match: (n) =>
-      n.includes('transporte') || n.includes('gasolina') || n.includes('etanol') || n.includes('combustivel') ||
-      n.includes('passagem') || n.includes('onibus') || n.includes('metro') || n.includes('uber') ||
-      n.includes('veiculo') || n.includes('pneu') || n.includes('estacionamento') || n.includes('pedagio'),
+      ['transportes','transporte','aluguel de veiculo','veiculo','gasolina','etanol',
+       'combustivel','passagem','onibus','metro','uber','pneu','estacionamento','pedagio',
+       'automovel','motocicleta','taxi','conserto de veiculo','manutencao de veiculo']
+        .some((termo) => temTermo(n, termo)),
   },
   {
-    id: '6',
-    nome: 'Saúde & Cuidados',
-    icone: '🏥',
+    id: '6', nome: 'Saúde e Cuidados', icone: '🏥',
     match: (n) =>
-      n.includes('saude') || n.includes('remedio') || n.includes('medicamento') || n.includes('medico') ||
-      n.includes('plano de saude') || n.includes('hospital') || n.includes('farmacia') || n.includes('higiene') ||
-      n.includes('perfume') || n.includes('shampoo') || n.includes('dentista') || n.includes('oculos'),
+      ['saude','remedio','medicamento','medico','plano de saude','hospital','farmacia',
+       'higiene','perfume','shampoo','dentista','armacao de oculos','lentes de oculos',
+       'lentes de contato','oculos de grau','produto para higiene bucal',
+       'higiene pessoal','aparelho ortodontico','consulta','exame','dentifricio','protetor solar']
+        .some((termo) => temTermo(n, termo)),
   },
   {
-    id: '7',
-    nome: 'Despesas Pessoais',
-    icone: '🪒',
+    id: '7', nome: 'Despesas Pessoais', icone: '🪒',
     match: (n) =>
-      n.includes('despesas pessoais') || n.includes('barbeiro') || n.includes('cabeleireiro') ||
-      n.includes('recreacao') || n.includes('cinema') || n.includes('viagem') || n.includes('hotel') ||
-      n.includes('cigarro') || n.includes('pet') || n.includes('veterinario'),
+      ['despesas pessoais','barbeiro','cabeleireiro','recreacao','cinema','viagem','hotel',
+       'cigarro','pet','veterinario','servico pessoal','manicure','pedicure','academia']
+        .some((termo) => temTermo(n, termo)),
   },
   {
-    id: '8',
-    nome: 'Educação',
-    icone: '🎓',
+    id: '8', nome: 'Educação', icone: '🎓',
     match: (n) =>
-      n.includes('educac') || n.includes('escola') || n.includes('faculdade') || n.includes('curso') ||
-      n.includes('mensalidade') || n.includes('livro') || n.includes('material escolar') || n.includes('idiomas'),
+      ['educacao','escola','faculdade','curso','mensalidade','livro','material escolar','idiomas',
+       'ensino','creche','uniforme escolar']
+        .some((termo) => temTermo(n, termo)),
   },
   {
-    id: '9',
-    nome: 'Comunicação',
-    icone: '📱',
+    id: '9', nome: 'Comunicação', icone: '📱',
     match: (n) =>
-      n.includes('comunicac') || n.includes('internet') || n.includes('telefone') || n.includes('celular') ||
-      n.includes('tv por assinatura') || n.includes('streaming') || n.includes('correio'),
+      ['comunicacao','internet','telefone','celular','tv por assinatura','streaming','correio',
+       'conserto de aparelho celular','aparelho celular','servico de telefonia','acesso a internet']
+        .some((termo) => temTermo(n, termo)),
   },
 ];
+
+// Subgrupos organizam visualmente as categorias reais retornadas pela API.
+// Não criam categorias de cálculo nem alteram os IDs oficiais.
+const SUBGRUPOS_POR_GRUPO: Record<string, SubgrupoUI[]> = {
+  '1': [
+    { id: 'carnes', nome: 'Carnes e aves', icone: '🥩', match: n => ['carne', 'frango', 'aves', 'miudos', 'embutidos', 'linguica', 'presunto', 'salsicha'].some(t => temTermo(n, t)) },
+    { id: 'peixes', nome: 'Peixes e frutos do mar', icone: '🐟', match: n => ['peixe', 'pescado', 'camarao', 'frutos do mar', 'bacalhau', 'sardinha', 'atum', 'merluza'].some(t => temTermo(n, t)) },
+    { id: 'frutas', nome: 'Frutas', icone: '🍎', match: n => ['fruta', 'maca', 'banana', 'laranja', 'mamao', 'manga', 'uva', 'pera', 'abacaxi', 'melancia', 'morango', 'limao'].some(t => temTermo(n, t)) },
+    { id: 'legumes', nome: 'Legumes, raízes e tubérculos', icone: '🥕', match: n => ['legume', 'verdura', 'hortalica', 'tuberculos', 'raizes', 'batata', 'cenoura', 'cebola', 'tomate', 'alface', 'mandioca'].some(t => temTermo(n, t)) },
+    { id: 'laticinios', nome: 'Leite e derivados', icone: '🥛', match: n => ['leite', 'queijo', 'iogurte', 'manteiga', 'creme de leite', 'requeijao'].some(t => temTermo(n, t)) },
+    { id: 'cereais', nome: 'Cereais, massas e panificados', icone: '🍞', match: n => ['arroz', 'feijao', 'farinha', 'macarrao', 'massa', 'pao', 'biscoito', 'bolo', 'cereal', 'aveia', 'milho'].some(t => temTermo(n, t)) },
+    { id: 'bebidas', nome: 'Bebidas', icone: '🥤', match: n => ['bebida', 'agua mineral', 'refrigerante', 'suco', 'cafe', 'cha', 'cerveja', 'vinho'].some(t => temTermo(n, t)) },
+  ],
+  '2': [
+    { id: 'moradia', nome: 'Moradia e serviços', icone: '🏠', match: n => ['aluguel', 'condominio', 'energia eletrica', 'agua e esgoto', 'taxa de agua', 'gas encanado', 'gas de botijao', 'iptu', 'servico domestico'].some(t => temTermo(n, t)) },
+    { id: 'limpeza', nome: 'Limpeza e produtos domésticos', icone: '🧹', match: n => ['limpeza', 'sabao', 'detergente', 'desinfetante', 'amaciante', 'esponja', 'vassoura', 'inseticida'].some(t => temTermo(n, t)) },
+    { id: 'reparos', nome: 'Reparos e manutenção', icone: '🛠️', match: n => ['reparo', 'conserto', 'manutencao', 'material de construcao', 'pintura', 'eletricista', 'encanador'].some(t => temTermo(n, t)) },
+  ],
+  '3': [
+    { id: 'eletrodomesticos', nome: 'Eletrodomésticos', icone: '🧺', match: n => ['eletrodomestico', 'maquina de lavar', 'geladeira', 'fogao', 'microondas', 'liquidificador', 'ventilador', 'ar condicionado', 'televisor', 'televisao', 'conserto de televisor', 'conserto de televisao'].some(t => temTermo(n, t)) },
+    { id: 'moveis', nome: 'Móveis e decoração', icone: '🛋️', match: n => ['movel', 'sofa', 'mesa', 'cadeira', 'cama', 'colchao', 'tapete', 'cortina', 'persiana', 'roupa de cama'].some(t => temTermo(n, t)) },
+    { id: 'utensilios', nome: 'Utensílios e artigos domésticos', icone: '🍽️', match: n => ['utensilio', 'louca', 'talher', 'panela', 'copo', 'prato', 'cama mesa e banho', 'conserto'].some(t => temTermo(n, t)) },
+  ],
+  '4': [
+    { id: 'roupas', nome: 'Roupas e tecidos', icone: '👕', match: n => ['roupa', 'vestuario', 'calca', 'camisa', 'saia', 'vestido', 'meia', 'tecido', 'confeccao', 'uniforme'].some(t => temTermo(n, t)) },
+    { id: 'calcados', nome: 'Calçados', icone: '👟', match: n => ['sapato', 'tenis', 'calcado', 'sandalia', 'chinelo', 'bota'].some(t => temTermo(n, t)) },
+    { id: 'acessorios', nome: 'Acessórios', icone: '👜', match: n => ['bolsa', 'joia', 'relogio de pulso', 'oculos de sol', 'cinto', 'chapeu'].some(t => temTermo(n, t)) },
+  ],
+  '5': [
+    { id: 'veiculos', nome: 'Veículos e manutenção', icone: '🚗', match: n => ['veiculo', 'automovel', 'motocicleta', 'pneu', 'conserto de veiculo', 'manutencao de veiculo', 'aluguel de veiculo', 'estacionamento', 'pedagio'].some(t => temTermo(n, t)) },
+    { id: 'combustiveis', nome: 'Combustíveis', icone: '⛽', match: n => ['gasolina', 'etanol', 'combustivel', 'oleo diesel', 'diesel', 'gnv'].some(t => temTermo(n, t)) },
+    { id: 'lubrificantes', nome: 'Manutenção e lubrificantes', icone: '🛠️', match: n => ['oleo lubrificante', 'lubrificante', 'troca de oleo', 'graxa'].some(t => temTermo(n, t)) },
+    { id: 'transporte-publico', nome: 'Transporte público e passagens', icone: '🚌', match: n => ['passagem', 'onibus', 'metro', 'trem', 'taxi', 'uber', 'transporte'].some(t => temTermo(n, t)) },
+  ],
+  '6': [
+    { id: 'medicamentos', nome: 'Medicamentos e farmácia', icone: '💊', match: n => ['remedio', 'medicamento', 'farmacia', 'antibiotico', 'analgesico'].some(t => temTermo(n, t)) },
+    { id: 'servicos-medicos', nome: 'Serviços médicos', icone: '🩺', match: n => ['medico', 'consulta medica', 'clinica medica', 'exame'].some(t => temTermo(n, t)) },
+    { id: 'servicos-dentarios', nome: 'Serviços dentários', icone: '🦷', match: n => ['dentista', 'dentario', 'odontologico', 'ortodontico', 'consulta odontologica'].some(t => temTermo(n, t)) },
+    { id: 'planos-e-hospitais', nome: 'Planos de saúde e hospitais', icone: '🏥', match: n => ['plano de saude', 'hospital', 'terapia'].some(t => temTermo(n, t)) },
+    { id: 'oculos', nome: 'Óculos e lentes', icone: '👓', match: n => ['armacao de oculos', 'oculos de grau', 'lentes de oculos', 'lentes de contato'].some(t => temTermo(n, t)) },
+    { id: 'higiene', nome: 'Higiene e cuidados pessoais', icone: '🧴', match: n => ['higiene', 'perfume', 'shampoo', 'dentifricio', 'protetor solar', 'sabonete', 'desodorante'].some(t => temTermo(n, t)) },
+  ],
+  '7': [
+    { id: 'cuidados-pessoais', nome: 'Serviços e cuidados pessoais', icone: '💈', match: n => ['barbeiro', 'cabeleireiro', 'manicure', 'pedicure', 'servico pessoal', 'academia'].some(t => temTermo(n, t)) },
+    { id: 'lazer', nome: 'Lazer, cultura e viagens', icone: '🎟️', match: n => ['recreacao', 'cinema', 'teatro', 'viagem', 'hotel', 'hospedagem', 'brinquedo', 'animal', 'veterinario', 'pet'].some(t => temTermo(n, t)) },
+  ],
+  '8': [
+    { id: 'ensino', nome: 'Ensino e mensalidades', icone: '🎓', match: n => ['escola', 'faculdade', 'curso', 'mensalidade', 'ensino', 'creche', 'idiomas'].some(t => temTermo(n, t)) },
+    { id: 'materiais', nome: 'Livros e material escolar', icone: '📚', match: n => ['livro', 'material escolar', 'caderno', 'papelaria', 'artigo escolar', 'uniforme escolar'].some(t => temTermo(n, t)) },
+  ],
+  '9': [
+    { id: 'telefonia', nome: 'Telefonia e celular', icone: '📱', match: n => ['telefone', 'celular', 'telefonia', 'aparelho celular', 'conserto de aparelho celular'].some(t => temTermo(n, t)) },
+    { id: 'internet-tv', nome: 'Internet e TV por assinatura', icone: '📡', match: n => ['internet', 'acesso a internet', 'tv por assinatura', 'streaming', 'servico de dados'].some(t => temTermo(n, t)) },
+    { id: 'correios', nome: 'Correios e comunicação', icone: '✉️', match: n => ['correio', 'telegrama', 'comunicacao'].some(t => temTermo(n, t)) },
+  ],
+};
+
+const subgruposDoGrupo = (grupoId: string): SubgrupoUI[] => [
+  ...(SUBGRUPOS_POR_GRUPO[grupoId] ?? []),
+  { id: `outros-${grupoId}`, nome: 'Outros itens', icone: '📂', match: () => true },
+];
+
+const nomeGenericoDeGrupo = (nome: string) => {
+  const chave = chaveNomeCategoria(nome);
+  return GRUPOS_PRINCIPAIS.some((grupo) => chave === chaveNomeCategoria(grupo.nome)) ||
+    chave === 'comunicacao' || chave === 'alimentacao e bebidas';
+};
+
+const grupoDaCategoria = (categoria: CategoriaIpca): GrupoUI | undefined => {
+  const nome = chaveNomeCategoria(categoria.nome ?? '');
+  // Regras específicas primeiro: corrigem casos conhecidos antes das palavras genéricas.
+  const regrasEspecificas: Array<{ termos: string[]; grupoId: string }> = [
+    { termos: ['camarao', 'tuberculos', 'raizes e legumes'], grupoId: '1' },
+    // Combustíveis e lubrificantes de veículos pertencem a Transportes,
+    // evitando que termos genéricos como "óleo" os classifiquem em Alimentação.
+    { termos: ['oleo diesel', 'diesel', 'oleo lubrificante', 'lubrificante'], grupoId: '5' },
+    { termos: ['tapete', 'roupa de cama', 'maquina de lavar roupa', 'conserto de maquina de lavar roupa'], grupoId: '3' },
+    { termos: ['aluguel de veiculo'], grupoId: '5' },
+    { termos: ['oculos de sol'], grupoId: '4' },
+    { termos: ['armacao de oculos', 'oculos de grau', 'lentes de oculos', 'lentes de contato', 'perfume', 'produto para higiene bucal', 'higiene pessoal'], grupoId: '6' },
+    { termos: ['conserto de aparelho celular'], grupoId: '9' },
+  ];
+  for (const regra of regrasEspecificas) {
+    if (regra.termos.some((termo) => temTermo(nome, termo))) {
+      return GRUPOS_PRINCIPAIS.find((grupo) => grupo.id === regra.grupoId);
+    }
+  }
+  return GRUPOS_PRINCIPAIS.find((grupo) => grupo.match(nome, categoria.id));
+};
 
 export default function InflacaoPessoalScreen() {
   const { colors } = useTheme();
@@ -132,6 +266,7 @@ export default function InflacaoPessoalScreen() {
   const [cestaGasto, setCestaGasto] = useState<{ categoriaId: string; nome: string; valor: string }[]>([]);
 
   const [grupoAtivoModal, setGrupoAtivoModal] = useState<GrupoUI | null>(null);
+  const [subgrupoAtivo, setSubgrupoAtivo] = useState<SubgrupoUI | null>(null);
   const [buscaCategoria, setBuscaCategoria] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<CategoriaIpca | null>(null);
   const [valorInput, setValorInput] = useState('');
@@ -164,7 +299,10 @@ export default function InflacaoPessoalScreen() {
       ]);
 
       if (listaCats.status === 'fulfilled' && listaCats.value?.length > 0) {
-        setCategorias(listaCats.value.filter((c) => c.id !== '7169'));
+        setCategorias(normalizarCategorias(listaCats.value.filter((c) =>
+          c.id !== '7169' &&
+          !['servicos medicos e dentarios', 'so joia', 'so joias', 'joia', 'joias'].includes(chaveNomeCategoria(c.nome ?? ''))
+        )));
       }
 
       if (historicoRes.status === 'fulfilled' && Array.isArray(historicoRes.value)) {
@@ -198,17 +336,69 @@ export default function InflacaoPessoalScreen() {
     }, 0);
   }, [cestaGasto]);
 
-  const categoriasDoGrupoFiltradas = useMemo(() => {
+  const categoriasDoGrupo = useMemo(() => {
     if (!grupoAtivoModal) return [];
-    const termoBusca = removerAcentos(buscaCategoria);
-
+    const nomesExibidos = new Set<string>();
     return categorias.filter((cat) => {
-      const nomeLimpo = removerAcentos(formatarNomeCategoria(cat.nome));
-      const pertenceAoGrupo = grupoAtivoModal.match(nomeLimpo, cat.id);
-      const bateuBusca = !termoBusca || nomeLimpo.includes(termoBusca);
-      return pertenceAoGrupo && bateuBusca;
+      const chaveNome = chaveNomeCategoria(cat.nome);
+      if (nomeGenericoDeGrupo(cat.nome)) return false;
+      // Oculta categorias genéricas redundantes no filtro de vestuário.
+      // As categorias específicas (roupa masculina/feminina/infantil e tecidos e armarinho) permanecem.
+      if (/^(?:roupa|roupas|tecido|tecidos|roupa e tecido|roupa e tecidos|roupas e tecido|roupas e tecidos|joia|joias|so joia|so joias)$/.test(chaveNome)) return false;
+      const pertenceAoGrupo = grupoDaCategoria(cat)?.id === grupoAtivoModal.id;
+      if (!pertenceAoGrupo || nomesExibidos.has(chaveNome)) return false;
+      nomesExibidos.add(chaveNome);
+      return true;
     });
-  }, [buscaCategoria, grupoAtivoModal, categorias]);
+  }, [grupoAtivoModal, categorias]);
+
+  const subgruposDoGrupoAtivo = useMemo(
+    () => grupoAtivoModal ? subgruposDoGrupo(grupoAtivoModal.id) : [],
+    [grupoAtivoModal]
+  );
+
+  const categoriasDoGrupoFiltradas = useMemo(() => {
+    const termoBusca = removerAcentos(buscaCategoria.trim()).replace(/\s+/g, ' ');
+    if (termoBusca) {
+      return categoriasDoGrupo.filter((cat) =>
+        removerAcentos(formatarNomeCategoria(cat.nome)).replace(/\s+/g, ' ').includes(termoBusca)
+      );
+    }
+    if (subgrupoAtivo) {
+      const gruposSemOutros = subgruposDoGrupoAtivo.slice(0, -1);
+      if (subgrupoAtivo.id.startsWith('outros-')) {
+        return categoriasDoGrupo.filter(cat =>
+          !gruposSemOutros.some(sg => sg.match(formatarNomeCategoria(cat.nome)))
+        );
+      }
+      const indexAtivo = gruposSemOutros.findIndex(sg => sg.id === subgrupoAtivo.id);
+      const anteriores = gruposSemOutros.slice(0, Math.max(indexAtivo, 0));
+      return categoriasDoGrupo.filter(cat => {
+        const nome = formatarNomeCategoria(cat.nome);
+        return subgrupoAtivo.match(nome) && !anteriores.some(sg => sg.match(nome));
+      });
+    }
+    return categoriasDoGrupo;
+  }, [buscaCategoria, subgrupoAtivo, subgruposDoGrupoAtivo, categoriasDoGrupo]);
+
+  const subgruposDisponiveis = useMemo(() => {
+    if (!grupoAtivoModal || buscaCategoria.trim()) return [];
+    const subgrupos = subgruposDoGrupoAtivo;
+    const especificos = subgrupos.slice(0, -1);
+    const disponiveis = especificos.filter((subgrupo, index) => {
+      const anteriores = especificos.slice(0, index);
+      return categoriasDoGrupo.some(cat => {
+        const nome = formatarNomeCategoria(cat.nome);
+        return subgrupo.match(nome) && !anteriores.some(sg => sg.match(nome));
+      });
+    });
+    const temOutros = categoriasDoGrupo.some(cat =>
+      !especificos.some(sg => sg.match(formatarNomeCategoria(cat.nome)))
+    );
+    if (temOutros) disponiveis.push(subgrupos[subgrupos.length - 1]);
+    // Se nenhuma regra específica casar com os nomes da API, todos continuam acessíveis.
+    return disponiveis.length ? disponiveis : [subgrupos[subgrupos.length - 1]];
+  }, [grupoAtivoModal, buscaCategoria, categoriasDoGrupo, subgruposDoGrupoAtivo]);
 
   const handleAdicionarItemCesta = () => {
     setErro(null);
@@ -372,6 +562,7 @@ export default function InflacaoPessoalScreen() {
             activeOpacity={0.8}
             onPress={() => {
               setGrupoAtivoModal(grupo);
+              setSubgrupoAtivo(null);
               setBuscaCategoria('');
             }}
           >
@@ -634,35 +825,60 @@ export default function InflacaoPessoalScreen() {
               {grupoAtivoModal?.icone} {grupoAtivoModal?.nome}
             </Text>
 
+            {subgrupoAtivo && !buscaCategoria.trim() && grupoAtivoModal && (
+              <TouchableOpacity style={styles.subgrupoVoltar} onPress={() => setSubgrupoAtivo(null)}>
+                <Text style={styles.subgrupoVoltarTexto}>‹ Todas as categorias de {grupoAtivoModal.nome}</Text>
+              </TouchableOpacity>
+            )}
+
             <TextInput
               style={styles.inputBuscaModal}
               placeholder={`Buscar em ${grupoAtivoModal?.nome}...`}
               placeholderTextColor={colors.textMuted}
               value={buscaCategoria}
-              onChangeText={setBuscaCategoria}
+              onChangeText={(valor) => {
+                setBuscaCategoria(valor);
+                if (valor.trim()) setSubgrupoAtivo(null);
+              }}
             />
 
-            <FlatList
-              data={categoriasDoGrupoFiltradas}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setCategoriaSelecionada(item);
-                    setGrupoAtivoModal(null);
-                    setBuscaCategoria('');
-                  }}
-                >
-                  <Text style={styles.modalItemText}>{formatarNomeCategoria(item.nome)}</Text>
-                </TouchableOpacity>
-              )}
-            />
+            {!buscaCategoria.trim() && !subgrupoAtivo && subgruposDisponiveis.length > 0 ? (
+              <FlatList
+                data={subgruposDisponiveis}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.modalItem} onPress={() => setSubgrupoAtivo(item)}>
+                    <Text style={styles.modalItemText}>{item.icone}  {item.nome}</Text>
+                    <Text style={styles.subgrupoSeta}>›</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              <FlatList
+                data={categoriasDoGrupoFiltradas}
+                keyExtractor={(item) => item.id}
+                ListEmptyComponent={<Text style={styles.modalItemText}>Nenhuma categoria encontrada.</Text>}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setCategoriaSelecionada(item);
+                      setGrupoAtivoModal(null);
+                      setSubgrupoAtivo(null);
+                      setBuscaCategoria('');
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{formatarNomeCategoria(item.nome)}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
 
             <TouchableOpacity
               style={styles.modalCloseBtn}
               onPress={() => {
                 setGrupoAtivoModal(null);
+                setSubgrupoAtivo(null);
                 setBuscaCategoria('');
               }}
             >
@@ -935,8 +1151,11 @@ const createStyles = (c: Colors) =>
       borderColor: c.primary,
       marginBottom: 12,
     },
-    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border },
-    modalItemText: { color: c.text, fontSize: 14 },
+    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    modalItemText: { color: c.text, fontSize: 14, flex: 1 },
+    subgrupoSeta: { color: c.textMuted, fontSize: 24, marginLeft: 10 },
+    subgrupoVoltar: { marginBottom: 10, paddingVertical: 8 },
+    subgrupoVoltarTexto: { color: c.accent, fontSize: 14, fontWeight: '700' },
     modalCloseBtn: {
       marginTop: 16,
       backgroundColor: c.surfaceAlt,
