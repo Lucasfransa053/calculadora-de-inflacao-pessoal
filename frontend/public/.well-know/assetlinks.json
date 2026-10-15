@@ -1,0 +1,16 @@
+
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.guilhermecosm.calculadorainflacaopessoal",
+      "sha256_cert_fingerprints": [
+        "1C:44:43:DA:48:7C:25:DF:A9:8D:60:B5:48:BB:B4:75:2B:CD:9D:7F:DC:7C:77:92:BF:AD:01:BA:0F:62:B7:48"
+      ]
+    }
+  }
+]
+

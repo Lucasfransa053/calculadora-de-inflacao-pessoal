@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "InflateIQ",
@@ -19,6 +20,21 @@
       },
       "package": "com.guilhermecosm.calculadorainflacaopessoal",
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "inflateiq.netlify.app",
+              "pathPrefix": "/redefinir-senha"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
         {
           "action": "VIEW",
           "autoVerify": false,
