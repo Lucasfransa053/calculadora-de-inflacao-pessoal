@@ -110,6 +110,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [escolhido, setEscolhido] = useState<'light' | 'dark' | null>(lerTemaSalvo);
   const pessoaAlterouTema = useRef(false);
 
+  // No app (Android/iOS) o tema salvo fica no AsyncStorage e é lido de forma assíncrona.
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
@@ -121,7 +122,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {
-        // Se o armazenamento estiver indisponivel, mantem o tema do sistema.
+        // Se o armazenamento estiver indisponível, mantém o tema do sistema.
       });
 
     return () => {
@@ -140,7 +141,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.setItem(CHAVE, novo);
       } else {
         void AsyncStorage.setItem(CHAVE, novo).catch(() => {
-          // Mantem a alteracao na sessao se nao for possivel salvar no aparelho.
+          // Mantém a alteração na sessão se não for possível salvar no aparelho.
         });
       }
     } catch {
