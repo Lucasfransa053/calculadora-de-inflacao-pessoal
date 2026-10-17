@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors, useTheme } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useIsDesktop } from '../hooks/useLayout';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { BrandMark } from '../components/Brand';
 import { solicitarRedefinicaoSenha } from '../services/auth';
 
@@ -30,6 +31,7 @@ export default function LoginScreen() {
   const { entrar, cadastrar } = useAuth();
   const desktop = useIsDesktop();
   const insets = useSafeAreaInsets();
+  const tecladoAltura = useKeyboardHeight();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -415,11 +417,11 @@ export default function LoginScreen() {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'web' ? undefined : 'padding'}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.mobileScroll}
+          contentContainerStyle={[styles.mobileScroll, { paddingBottom: 24 + tecladoAltura }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

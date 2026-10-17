@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   View,
   Text,
@@ -15,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, useTheme } from '../theme';
 import { PageHeader } from '../components/PageHeader';
 import { useIsDesktop } from '../hooks/useLayout';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
   buscarCategoriasIpca,
   calcularInflacaoPessoal,
@@ -260,6 +263,7 @@ const grupoDaCategoria = (categoria: CategoriaIpca): GrupoUI | undefined => {
 export default function InflacaoPessoalScreen() {
   const { colors } = useTheme();
   const desktop = useIsDesktop();
+  const tecladoAltura = useKeyboardHeight();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [categorias, setCategorias] = useState<CategoriaIpca[]>([]);
@@ -791,7 +795,11 @@ export default function InflacaoPessoalScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={[styles.container, desktop && styles.containerDesktop]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'web' ? undefined : 'padding'} style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={[styles.container, desktop && styles.containerDesktop, tecladoAltura > 0 && { paddingBottom: 24 + tecladoAltura }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <PageHeader
           titulo="Minha Inflação Pessoal"
           subtitulo="Monte sua cesta de consumo navegando pelos grupos abaixo e acompanhe o total acumulado."
@@ -817,6 +825,7 @@ export default function InflacaoPessoalScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={!!grupoAtivoModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>

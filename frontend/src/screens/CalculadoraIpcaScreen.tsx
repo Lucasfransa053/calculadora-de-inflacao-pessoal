@@ -14,11 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, useTheme } from '../theme';
 import { PageHeader } from '../components/PageHeader';
 import { useIsDesktop } from '../hooks/useLayout';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { buscarUltimoIpca, calcularCorrecaoBackend, CorrecaoResponseDTO } from '../services/api';
 
 export default function CalculadoraIpcaScreen() {
   const { colors } = useTheme();
   const desktop = useIsDesktop();
+  const tecladoAltura = useKeyboardHeight();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [valor, setValor] = useState('');
@@ -255,9 +257,9 @@ export default function CalculadoraIpcaScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'web' ? undefined : 'padding'} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.container, desktop && styles.containerDesktop]}
+          contentContainerStyle={[styles.container, desktop && styles.containerDesktop, tecladoAltura > 0 && { paddingBottom: 24 + tecladoAltura }]}
           keyboardShouldPersistTaps="handled"
         >
           <PageHeader

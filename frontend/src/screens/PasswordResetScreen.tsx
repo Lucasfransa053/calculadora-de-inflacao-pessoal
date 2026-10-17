@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, useTheme } from '../theme';
 import { useIsDesktop } from '../hooks/useLayout';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { BrandMark } from '../components/Brand';
 import { redefinirSenha } from '../services/auth';
 
@@ -21,6 +22,7 @@ const semContorno = (Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) as o
 export default function PasswordResetScreen({ token, onDone }: { token: string; onDone: () => void }) {
   const { colors } = useTheme();
   const desktop = useIsDesktop();
+  const tecladoAltura = useKeyboardHeight();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
@@ -53,8 +55,8 @@ export default function PasswordResetScreen({ token, onDone }: { token: string; 
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 24 + tecladoAltura }]} keyboardShouldPersistTaps="handled">
           <View style={[styles.card, desktop && styles.cardDesktop]}>
             <View style={styles.brand}>
               <BrandMark size={42} />
