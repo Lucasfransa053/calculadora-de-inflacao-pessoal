@@ -666,17 +666,8 @@ export default function InflacaoPessoalScreen() {
           <Text style={styles.warningIcon}>⚠️</Text>
           <View style={styles.warningContent}>
             <Text style={styles.warningTextPrefix}>
-              {resultado.itensAvisoDesconsiderados?.textoPrefixo || 'Alguns itens foram desconsiderados:'}
+              {resultado.mensagemAviso}
             </Text>
-            {resultado.itensAvisoDesconsiderados?.itens && resultado.itensAvisoDesconsiderados.itens.length > 0 && (
-              <View style={styles.warningBadgesRow}>
-                {resultado.itensAvisoDesconsiderados.itens.map((item: string, idx: number) => (
-                  <View key={idx} style={styles.warningBadgeItem}>
-                    <Text style={styles.warningBadgeText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         </View>
       )}
@@ -954,28 +945,55 @@ const createStyles = (c: Colors) =>
     nomeGrupoGrid: { color: c.text, fontSize: 12, textAlign: 'center', fontWeight: '600' },
 
     boxInsercaoValor: {
-      backgroundColor: c.primarySoft,
+      marginTop: 20,
+      backgroundColor: c.surfaceAlt,
       borderRadius: 18,
-      padding: 18,
       borderWidth: 1,
-      borderColor: c.primary,
-      marginTop: 16,
+      borderColor: c.border, // Removemos qualquer destaque indesejado daqui
+      padding: 18,
     },
-    itemSelecionadoLabel: { color: c.textSecondary, fontSize: 12 },
-    itemSelecionadoNome: { color: c.accent, fontSize: 15, fontWeight: '800', marginTop: 2, marginBottom: 12 },
-    rowAdicionarValor: { flexDirection: 'row', gap: 12 },
+    itemSelecionadoLabel: {
+      color: c.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    itemSelecionadoNome: {
+      color: c.accent,
+      fontSize: 18,
+      fontWeight: '800',
+      marginTop: 2,
+      marginBottom: 14,
+    },
+    rowAdicionarValor: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
     inputGastoWrapper: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: c.surface,
-      paddingHorizontal: 14,
       borderRadius: 14,
-      borderWidth: 1,
-      borderColor: c.border,
+      borderWidth: 1.5,
+      borderColor: c.primary, // A borda amarela agora envolve perfeitamente apenas o input de valor!
+      paddingHorizontal: 14,
+      height: 52,
     },
-    prefixoMoeda: { color: c.textMuted, marginRight: 6 },
-    inputGasto: { flex: 1, color: c.text, fontSize: 15, fontWeight: '700', paddingVertical: 13 },
+    prefixoMoeda: {
+      color: c.textSecondary,
+      fontSize: 15,
+      fontWeight: '600',
+      marginRight: 6,
+    },
+    inputGasto: {
+      flex: 1,
+      color: c.text,
+      fontSize: 16,
+      fontWeight: '700',
+      padding: 0,
+      outlineStyle: 'none', // Remove o outline nativo feio do navegador na web
+    } as any,
     btnAdicionar: {
       backgroundColor: c.primary,
       paddingHorizontal: 18,
