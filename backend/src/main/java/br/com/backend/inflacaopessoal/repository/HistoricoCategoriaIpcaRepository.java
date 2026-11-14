@@ -15,6 +15,8 @@ public interface HistoricoCategoriaIpcaRepository extends JpaRepository<Historic
 
     List<HistoricoCategoriaIpcaEntity> findByDataReferenciaBetween(LocalDate inicio, LocalDate fim);
 
+    boolean existsByCategoria_IdAndDataReferencia(String categoriaId, LocalDate dataReferencia);
+
     @Query("""
         SELECT DISTINCT h.categoria 
         FROM HistoricoCategoriaIpcaEntity h 

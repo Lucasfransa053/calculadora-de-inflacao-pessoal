@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -101,38 +102,51 @@ public class InflacaoPessoalService {
                 totalNovasCategorias, totalNovosHistoricos);
     }
 
-    // A transação agora é isolada apenas no momento da gravação dos dados no banco
     @Transactional
     public int[] salvarDadosSincronizados(List<IbgeGrupoDTO> grupos) {
         if (grupos == null || grupos.isEmpty()) {
             return new int[]{0, 0};
         }
 
-        Set<String> categoriasExistentes = categoriaRepository.findAll()
-                .stream()
+        // 1. Busca em lote todas as categorias existentes de uma só vez
+        Set<String> categoriasExistentes = categoriaRepository.findAll().stream()
                 .map(CategoriaIpcaEntity::getId)
                 .collect(Collectors.toSet());
 
-        Set<String> historicosExistentes = historicoRepository.findAll()
-                .stream()
-                .map(h -> h.getCategoria().getId() + "_" + h.getDataReferencia())
-                .collect(Collectors.toSet());
+        // 2. Extrai as datas mínimas e máximas do lote atual para buscar apenas o histórico necessário
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        
+        List<LocalDate> datasLote = grupos.stream()
+                .map(dto -> LocalDate.parse(dto.periodo() + "01", formatter))
+                .distinct()
+                .toList();
+
+        LocalDate minData = datasLote.stream().min(LocalDate::compareTo).orElse(null);
+        LocalDate maxData = datasLote.stream().max(LocalDate::compareTo).orElse(null);
+
+        // 3. Carrega em memória apenas os históricos do período correspondente (evita carregar a tabela inteira)
+        Set<String> historicosExistentes = new HashSet<>();
+        if (minData != null && maxData != null) {
+            historicosExistentes = historicoRepository.findByDataReferenciaBetween(minData, maxData).stream()
+                    .map(h -> h.getCategoria().getId() + "_" + h.getDataReferencia())
+                    .collect(Collectors.toSet());
+        }
 
         List<CategoriaIpcaEntity> novasCategoriasEntities = new ArrayList<>();
         List<HistoricoCategoriaIpcaEntity> novosHistoricosEntities = new ArrayList<>();
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-
         for (IbgeGrupoDTO dto : grupos) {
+            // Verifica se a categoria é nova usando o Set em memória
             if (!categoriasExistentes.contains(dto.id())) {
                 CategoriaIpcaEntity novaCategoria = new CategoriaIpcaEntity(dto.id(), dto.nome());
                 novasCategoriasEntities.add(novaCategoria);
-                categoriasExistentes.add(dto.id());
+                categoriasExistentes.add(dto.id()); // Evita duplicados no mesmo lote
             }
 
             LocalDate dataReferencia = LocalDate.parse(dto.periodo() + "01", formatter);
             String chaveHistorico = dto.id() + "_" + dataReferencia;
 
+            // Valida duplicidade usando o Set em memória
             if (!historicosExistentes.contains(chaveHistorico)) {
                 try {
                     BigDecimal valor = new BigDecimal(dto.valor().replace(",", "."));
@@ -141,13 +155,14 @@ public class InflacaoPessoalService {
                     categoriaRef.setId(dto.id());
 
                     novosHistoricosEntities.add(new HistoricoCategoriaIpcaEntity(categoriaRef, dataReferencia, valor));
-                    historicosExistentes.add(chaveHistorico);
+                    historicosExistentes.add(chaveHistorico); // Evita duplicados no mesmo lote
                 } catch (NumberFormatException e) {
-                    // Ignora valores não numéricos retornados pelo IBGE (ex: "...", "-")
+                    // Ignora valores não numéricos retornados pelo IBGE
                 }
             }
         }
 
+        // 4. Persiste tudo em lote de uma única vez
         if (!novasCategoriasEntities.isEmpty()) {
             categoriaRepository.saveAll(novasCategoriasEntities);
         }
