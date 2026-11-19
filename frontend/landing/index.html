@@ -26,6 +26,7 @@ a{color:inherit;text-decoration:none}
 .pill i{width:36px;height:36px;border-radius:50%;background:#000;color:var(--y);display:grid;place-items:center;font-style:normal;transition:.25s}
 .pill:hover{box-shadow:0 10px 40px rgba(255,225,0,.35)}.pill:hover i{transform:rotate(45deg)}
 .pill.gh{background:rgba(255,255,255,.06);color:var(--tx);border:1px solid var(--bd);padding:0 24px}
+.pill.dl{background:rgba(255,255,255,.06);color:var(--tx);border:1px solid var(--bd);padding:0 6px 0 24px}.pill.dl i{background:var(--y);color:#000}.pill.dl:hover i{transform:translateY(2px)}
 .pill.sm{height:42px;font-size:12px}.pill.sm i{width:30px;height:30px}
 .gl{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012))}
 header{position:fixed;top:16px;left:0;right:0;z-index:30;padding:0 clamp(16px,2.4vw,40px)}
@@ -125,7 +126,7 @@ h2{font-size:clamp(26px,3.8vw,60px);max-width:860px}
 <body>
 <header><div class="nv">
   <a class="lg" href="#/"><img src="/landing/icon.png" alt="">InflateIQ</a>
-  <nav id="nav"><a href="#/" data-p="inicio">Início</a><a href="#/ferramentas" data-p="ferramentas">Ferramentas</a><a href="#/como-funciona" data-p="como-funciona">Como funciona</a><a href="#/dados" data-p="dados">Dados</a><a href="#/telas" data-p="telas">Telas</a><a href="#/perguntas" data-p="perguntas">Perguntas</a></nav>
+  <nav id="nav"><a href="#/" data-p="inicio">Início</a><a href="#/ferramentas" data-p="ferramentas">Ferramentas</a><a href="#/como-funciona" data-p="como-funciona">Como funciona</a><a href="#/dados" data-p="dados">Dados</a><a href="#/telas" data-p="telas">Telas</a><a href="#/perguntas" data-p="perguntas">Perguntas</a><a href="#/download" data-p="download">Download</a></nav>
   <a class="en" href="/app">Entrar</a><a class="pill sm" href="/app">Abrir o sistema <i>↗</i></a>
   <button class="mb" id="mb" aria-label="Menu">☰</button>
 </div></header>
@@ -138,7 +139,7 @@ h2{font-size:clamp(26px,3.8vw,60px);max-width:860px}
     <span class="tag">IPCA oficial + sua cesta de gastos</span>
     <h1 class="k" style="margin-top:20px">A inflação que você <em>realmente sente.</em></h1>
     <p class="lead">Compare o IPCA oficial com a inflação do seu próprio orçamento, com dados do Banco Central e do IBGE.</p>
-    <div class="ct"><a class="pill" href="/app">Abrir o sistema <i>↗</i></a><a class="pill gh" href="#/como-funciona">Ver como funciona</a></div></div>
+    <div class="ct"><a class="pill" href="/app">Abrir o sistema <i>↗</i></a><a class="pill gh" href="#/como-funciona">Ver como funciona</a><a class="pill dl" href="#/download">Download <i>↓</i></a></div></div>
     <div class="nm"><div><b>02</b><span>Calculadoras<br>em um só lugar</span></div><div><b>02</b><span>Fontes oficiais<br>BCB e IBGE</span></div></div></div></div>
   <div class="wm" aria-hidden="true">InflateIQ</div>
   <div class="fl">
@@ -226,6 +227,18 @@ h2{font-size:clamp(26px,3.8vw,60px);max-width:860px}
 </div></div></div>
 
 <!-- PERGUNTAS -->
+<!-- DOWNLOAD -->
+<div class="pg" id="download"><style>#download .g{justify-content:space-between}</style><div class="top"><div class="w">
+  <div class="ct2"><span class="tag">App Android</span><h2 class="i" style="font-size:clamp(34px,5vw,64px)">Leve o InflateIQ<br>no seu celular.</h2><p>Baixe o aplicativo e calcule a sua inflação pessoal em qualquer lugar.</p>
+  <div class="ct" style="justify-content:center;margin-top:28px"><a class="pill" href="https://github.com/Lucasfransa053/calculadora-de-inflacao-pessoal/releases/latest/download/inflateiq.apk" download>Baixar APK <i>↓</i></a><a class="pill gh" href="/app">Usar no navegador</a></div></div>
+  <div class="bt">
+    <div class="gl g"><div class="ar">1</div><div><h3>Baixe o arquivo</h3><p>Toque em “Baixar APK” pelo navegador do seu celular Android.</p></div></div>
+    <div class="gl g"><div class="ar">2</div><div><h3>Permita a instalação</h3><p>Se o Android pedir, autorize a instalação de apps desta fonte nas configurações.</p></div></div>
+    <div class="gl g"><div class="ar">3</div><div><h3>Abra e entre</h3><p>Abra o InflateIQ, faça login e comece a calcular.</p></div></div>
+  </div>
+  <p class="cp" style="text-align:center">Disponível só para Android. No iPhone, use o sistema pelo navegador.</p>
+</div></div></div>
+
 <div class="pg" id="perguntas"><div class="top"><div class="w">
   <div class="ct2"><span class="tag">Perguntas</span><h2 class="i" style="font-size:clamp(34px,5vw,52px)">Tire suas dúvidas.</h2></div>
   <div class="fq">
