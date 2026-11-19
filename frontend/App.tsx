@@ -271,8 +271,8 @@ function BarraAbas({
             accessibilityState={{ selected: ativo }}
             accessibilityLabel={aba.rotulo}
           >
-            <View style={[styles.abaIcone, ativo && styles.abaIconeAtivo]}>
-              <IconeAba id={aba.id} cor={ativo ? colors.onPrimary : colors.textMuted} fundo={ativo ? colors.primary : colors.surface} />
+            <View style={styles.abaIcone}>
+              <IconeAba id={aba.id} cor={ativo ? colors.primary : colors.textMuted} fundo={colors.surface} />
             </View>
             <Text style={[styles.abaRotulo, ativo && styles.abaRotuloAtivo]}>{aba.rotulo}</Text>
           </TouchableOpacity>
@@ -408,7 +408,6 @@ const createStyles = (c: Colors) =>
     },
     aba: { flex: 1, alignItems: 'center', gap: 4 },
     abaIcone: { width: 48, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    abaIconeAtivo: { backgroundColor: c.primary },
     abaRotulo: { fontSize: 11, fontWeight: '600', color: c.textMuted },
     abaRotuloAtivo: { color: c.text, fontWeight: '800' },
 
