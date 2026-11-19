@@ -23,7 +23,8 @@
 hs_err_pid*
 replay_pid*
 
-# Configuração local com senha (nunca subir pro GitHub)
+# Configuração com senha (nunca subir pro GitHub)
+application.properties
 application-local.properties
-
-
+application-*.properties
+!application.properties.example

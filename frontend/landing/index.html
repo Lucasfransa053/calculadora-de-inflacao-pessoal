@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InflateIQ — A inflação que você realmente sente</title>
+<meta name="description" content="Compare o IPCA oficial com a inflação do seu próprio orçamento. Dados do Banco Central e do IBGE.">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050505;--bd:#262626;--tx:#FAFAFA;--t2:#A3A3A3;--mu:#6B6B6B;--y:#FFE100;--o:#FFB000;--r:24px}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font:14px/1.65 Montserrat,-apple-system,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.w{max-width:1520px;margin:0 auto;padding:0 calc(clamp(16px,2.4vw,40px) + 22px)}@media(min-width:1600px){.w{padding:0 22px}}
+.k{font-weight:400;text-transform:uppercase;line-height:1.05}
+.i{font-family:Inter,Montserrat,sans-serif;font-weight:300;letter-spacing:-.03em;line-height:1.08;background:linear-gradient(180deg,#fff 30%,#7a7a7a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.nd{display:inline-block;width:.7em;height:.7em;border:.095em solid currentColor;border-left:0;border-radius:0 .36em .36em 0;margin:0 .03em;position:relative;-webkit-text-fill-color:currentColor}
+.nd:after{content:"";position:absolute;left:0;top:.24em;bottom:-.095em;width:.095em;background:currentColor}
+.lb{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);font-weight:500}
+.tag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--bd);background:rgba(255,255,255,.03);border-radius:99px;padding:6px 14px;font-size:11px;font-weight:500;color:var(--t2)}
+.tag:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--y);box-shadow:0 0 10px var(--y)}
+.pill{display:inline-flex;align-items:center;gap:14px;height:48px;padding:0 6px 0 22px;border-radius:99px;background:var(--y);color:#000;font-weight:600;font-size:13px;white-space:nowrap;transition:.25s}
+.pill i{width:36px;height:36px;border-radius:50%;background:#000;color:var(--y);display:grid;place-items:center;font-style:normal;transition:.25s}
+.pill:hover{box-shadow:0 10px 40px rgba(255,225,0,.35)}.pill:hover i{transform:rotate(45deg)}
+.pill.gh{background:rgba(255,255,255,.06);color:var(--tx);border:1px solid var(--bd);padding:0 24px}
+.pill.sm{height:42px;font-size:12px}.pill.sm i{width:30px;height:30px}
+.gl{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012))}
+header{position:fixed;top:16px;left:0;right:0;z-index:30;padding:0 clamp(16px,2.4vw,40px)}
+.nv{max-width:1520px;margin:0 auto;display:flex;align-items:center;gap:26px;height:60px;padding:0 8px 0 22px;border:1px solid var(--bd);border-radius:99px;background:rgba(10,10,10,.78);backdrop-filter:blur(18px);position:relative}
+.nv .lg{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}.nv img{width:28px;height:28px;border-radius:8px}
+.nv nav{display:flex;gap:24px;margin-left:auto;font-size:12.5px;font-weight:500;color:var(--t2)}.nv nav a:hover,.nv nav a.on{color:var(--tx)}
+.nv .en{font-size:12.5px;font-weight:500;color:var(--t2)}
+.mb{display:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--bd);background:none;color:var(--tx);font-size:16px;cursor:pointer;margin-left:auto}
+@media(max-width:900px){.mb{display:block}.nv .pill{display:none}.nv .en{display:none}.nv nav{display:none;position:absolute;top:68px;left:0;right:0;flex-direction:column;gap:0;background:rgba(10,10,10,.96);border:1px solid var(--bd);border-radius:24px;padding:10px}.nv nav.op{display:flex}.nv nav a{padding:14px 16px;font-size:14px}}
+.pg{display:none;animation:in .6s both}.pg.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(14px)}}
+.top{padding:150px 0 70px}
+.hero{position:relative;overflow:hidden;padding:150px 0 0;min-height:min(100vh,1000px)}
+.orb{position:absolute;right:-8%;top:24%;width:min(620px,80vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 40%,#FFF3A0,var(--y) 18%,var(--o) 42%,rgba(255,120,0,.35) 62%,transparent 72%);filter:blur(24px)}
+.hero .w{position:relative;z-index:2}
+.hr{display:flex;justify-content:space-between;gap:40px}
+h1{font-size:clamp(32px,5vw,88px)}h1 em{font-style:normal;color:var(--y)}
+.hero p.lead{max-width:520px;margin:24px 0 32px;color:var(--t2);font-size:clamp(13px,1.05vw,18px)}
+.ct{display:flex;gap:12px;flex-wrap:wrap}
+.nm{display:flex;gap:44px;text-align:right}.nm b{display:block;font-size:60px;font-weight:300;line-height:1}.nm span{font-size:11px;line-height:1.4;display:block;margin-top:8px}
+.wm{font-weight:600;text-transform:uppercase;line-height:.8;letter-spacing:-.045em;font-size:min(18.6vw,300px);white-space:nowrap;text-align:center;position:relative;z-index:1}
+.hero .wm{margin-top:60px;margin-bottom:-.1em}
+.fl{position:absolute;z-index:3;left:50%;bottom:5%;transform:translateX(-50%);display:flex;gap:14px}
+.gc{width:210px;padding:16px;background:rgba(14,14,14,.75);backdrop-filter:blur(20px);border-radius:20px}
+.gc strong{display:block;font-size:30px;font-weight:500;letter-spacing:-.03em;margin:2px 0 8px}
+.br{height:34px;display:flex;align-items:flex-end;gap:3px}.br u{flex:1;border-radius:2px;background:var(--y)}.br.gr u{background:#666}
+@media(max-width:820px){.hr{flex-direction:column}.nm{text-align:left}.nm b{font-size:42px}.fl{position:static;transform:none;justify-content:center;margin-top:-6px}.gc{width:46%;padding:12px}.orb{top:10%;right:-40%;opacity:.5}}
+.ds{border-block:1px solid var(--bd);padding:24px 0;position:relative;z-index:4;background:var(--bg)}
+.ds .w{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;color:var(--t2);font-weight:600;font-size:16px}
+section{padding:clamp(100px,8vw,150px) 0}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:48px;margin-bottom:48px}
+h2{font-size:clamp(26px,3.8vw,60px);max-width:860px}
+.hd p{max-width:400px;color:var(--t2);font-size:clamp(13px,.95vw,16px)}
+.ct2{text-align:center;max-width:820px;margin:0 auto 52px}.ct2 h2{margin:18px auto 14px}.ct2 p{color:var(--t2);font-size:clamp(13px,.95vw,16px)}
+@media(max-width:820px){.hd{flex-direction:column;align-items:flex-start;gap:18px}section{padding:70px 0}.top{padding-top:120px}}
+.ls details{border-top:1px solid var(--bd)}.ls details:last-child,.ls .lk:last-child{border-bottom:1px solid var(--bd)}
+.ls summary,.ls .lk{list-style:none;cursor:pointer;display:grid;grid-template-columns:80px 1fr 46px;align-items:center;gap:18px;padding:26px 0}
+.ls .lk{border-top:1px solid var(--bd)}
+.ls summary::-webkit-details-marker{display:none}
+.ls summary span,.ls .lk span{color:var(--mu);font-size:14px}
+.ls h3{font-weight:400;text-transform:uppercase;font-size:clamp(18px,2.8vw,32px);color:var(--t2);transition:.25s}
+.ls details[open] h3,.ls summary:hover h3,.ls .lk:hover h3{color:var(--tx)}
+.ls b.ci{width:46px;height:46px;border-radius:50%;border:1px solid var(--bd);display:grid;place-items:center;font-weight:400;transition:.3s}
+.ls details[open] b.ci,.ls .lk:hover b.ci{background:var(--y);color:#000;border-color:var(--y)}
+.bd{display:grid;grid-template-columns:80px 1fr;gap:18px;padding:0 0 34px}.bd p{color:var(--t2);max-width:420px;margin-bottom:18px}
+@media(max-width:820px){.ls summary,.ls .lk{grid-template-columns:44px 1fr 42px;gap:10px}.bd{grid-template-columns:1fr}}
+.cd{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.c{border-radius:var(--r);padding:28px;min-height:330px;display:flex;flex-direction:column;justify-content:space-between}
+.c strong{font-size:clamp(48px,6.4vw,110px);font-weight:300;letter-spacing:-.04em;line-height:1}
+.c h4{font-size:14px;font-weight:600;margin-bottom:6px}.c p{font-size:12.5px;opacity:.78}
+.c.y{background:radial-gradient(circle at 20% 110%,#FF8A00,transparent 60%),radial-gradient(circle at 90% 0,#FFF3A0,transparent 45%),var(--y);color:#000}
+.c.w2{background:#FAFAFA;color:#0A0A0A}.c.d{background:radial-gradient(circle at 80% 100%,rgba(255,176,0,.55),transparent 60%),#0E0E0E;border:1px solid var(--bd)}
+.cp{margin-top:14px;font-size:11px;color:var(--mu)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tl{padding:30px;min-height:420px}
+.tl .t{display:flex;justify-content:space-between}.tl h3{font-size:24px;margin:12px 0 20px}
+.fld{border:1px solid var(--bd);background:#101010;border-radius:12px;padding:11px 14px;font-size:12px;color:var(--t2);margin-bottom:10px;display:flex;justify-content:space-between;gap:10px}.fld b{color:#fff;font-weight:500}
+.rs{display:flex;gap:10px;margin:16px 0 22px}.rs div{flex:1;border:1px solid var(--bd);border-radius:12px;padding:10px 14px}.rs div.y{background:var(--y);color:#000;border-color:var(--y)}.rs b{font-size:24px;font-weight:500}.rs .lb{font-size:9px}.rs .y .lb{color:#554900}
+.bt{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.g{padding:28px;min-height:230px;display:flex;flex-direction:column;justify-content:flex-end}.g h3{font-size:16px;font-weight:600;margin-bottom:6px}.g p{font-size:13px;color:var(--t2)}
+.ar{position:relative;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;color:var(--y);font-weight:600;font-size:14px;background:radial-gradient(circle,rgba(255,225,0,.2),transparent 70%);margin:26px auto 60px}
+.ar:before,.ar:after{content:"";position:absolute;inset:-16px;border-radius:50%;border:1px solid rgba(255,225,0,.2)}.ar:after{inset:-34px;border-color:rgba(255,225,0,.08)}
+.g .ar{margin:0 0 auto}
+.dg{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.dg .gl{text-align:center;padding:30px 14px 26px;min-height:300px;display:flex;flex-direction:column;justify-content:space-between}
+.dg h3{font-size:14px;font-weight:600}.dg small{color:var(--mu);font-size:11px;display:block;margin-top:4px}
+.cm{display:grid;grid-template-columns:1.3fr 1fr;gap:56px;align-items:start}
+.pw{padding:28px}.pw .row{font-size:12px;color:var(--t2);display:flex;justify-content:space-between;margin-top:12px}.pw .row b{color:#fff;font-weight:500}.pw .bar{height:7px;background:#222;border-radius:9px;margin-top:6px}.pw .bar i{display:block;height:100%;background:var(--y);border-radius:9px}
+.fm{font-family:ui-monospace,Menlo,monospace;font-size:13px;text-align:center;margin-top:22px;color:#fff}
+.sc{display:grid;grid-template-columns:1fr 1.45fr 1fr;gap:16px;align-items:end}.sc .gl{padding:22px}
+.yb{background:var(--y);color:#000;border-radius:16px;padding:18px;display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;margin:14px 0}
+.yb small{display:block;font-size:8px;font-weight:700;letter-spacing:.1em;color:#554900}.yb strong{font-size:16px;font-weight:600;line-height:1.25;display:block;margin-top:6px}
+.yb .ch{background:#0a0a0a;border-radius:10px;padding:12px;font-size:8px;color:#aaa}.yb u{display:inline-block;height:6px;border-radius:9px;margin-left:6px}
+.bt2{background:var(--y);color:#000;text-align:center;border-radius:12px;padding:12px;font-weight:600;margin-top:14px}
+.fq{max-width:980px;margin:0 auto}.fq details{border:1px solid var(--bd);border-radius:18px;margin-bottom:12px;padding:20px 26px;background:rgba(255,255,255,.02)}
+.fq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;font-weight:500;font-size:15px}.fq summary::-webkit-details-marker{display:none}
+.fq summary:after{content:"+";color:var(--y);font-size:22px;line-height:1}.fq details[open] summary:after{content:"–"}.fq p{margin-top:12px;color:var(--t2);font-size:13.5px}
+@media(max-width:900px){.cd,.g2,.bt,.cm,.sc{grid-template-columns:1fr}.dg{grid-template-columns:1fr 1fr}.cm{gap:30px}.c{min-height:240px}}
+@media(min-width:1400px){
+.pill{height:56px;font-size:15px;padding:0 8px 0 28px}.pill i{width:40px;height:40px}.pill.gh{padding:0 30px}.pill.sm{height:46px;font-size:13px}.pill.sm i{width:34px;height:34px}
+.nv{height:68px}.nv nav{font-size:14px;gap:30px}.nv .en{font-size:14px}.nv .lg{font-size:17px}
+.tag{font-size:12.5px;padding:8px 18px}
+.nm b{font-size:84px}.nm span{font-size:13px}.nm{gap:60px}
+.gc{width:270px;padding:20px}.gc strong{font-size:40px}.br{height:44px}
+.ds .w{gap:72px;font-size:19px}
+.c{min-height:400px;padding:36px}.c h4{font-size:17px}.c p{font-size:14.5px}
+.tl{padding:40px;min-height:480px}.g{padding:36px;min-height:270px}.g h3{font-size:19px}.g p{font-size:14.5px}
+.ls summary,.ls .lk{padding:34px 0;grid-template-columns:110px 1fr 56px}.ls h3{font-size:clamp(18px,2.8vw,44px)}
+.fq summary{font-size:17px}.fq p{font-size:15px}
+}
+.fn{position:relative;text-align:center;padding:110px 0 0;overflow:hidden;border-top:1px solid var(--bd)}
+.fn:before{content:"";position:absolute;left:50%;top:55%;width:80vw;height:46vw;transform:translateX(-50%);background:radial-gradient(ellipse,rgba(255,200,0,.5),transparent 65%);filter:blur(40px)}
+.fn .w{position:relative}.fn h2{margin:18px auto 30px}
+.fn .wm{margin-top:60px;margin-bottom:-.12em;color:transparent;background:linear-gradient(180deg,#FAFAFA 8%,rgba(250,250,250,.04) 82%);-webkit-background-clip:text;background-clip:text}
+.ft{position:relative;z-index:2;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-top:1px solid var(--bd);background:var(--bg);font-size:12px;color:var(--mu)}.ft a:hover{color:var(--tx)}.ft div{display:flex;gap:22px}
+</style>
+</head>
+<body>
+<header><div class="nv">
+  <a class="lg" href="#/"><img src="/landing/icon.png" alt="">InflateIQ</a>
+  <nav id="nav"><a href="#/" data-p="inicio">Início</a><a href="#/ferramentas" data-p="ferramentas">Ferramentas</a><a href="#/como-funciona" data-p="como-funciona">Como funciona</a><a href="#/dados" data-p="dados">Dados</a><a href="#/telas" data-p="telas">Telas</a><a href="#/perguntas" data-p="perguntas">Perguntas</a></nav>
+  <a class="en" href="/app">Entrar</a><a class="pill sm" href="/app">Abrir o sistema <i>↗</i></a>
+  <button class="mb" id="mb" aria-label="Menu">☰</button>
+</div></header>
+
+<main>
+<!-- INÍCIO -->
+<div class="pg" id="inicio">
+<div class="hero"><div class="orb"></div><div class="w">
+  <div class="hr"><div>
+    <span class="tag">IPCA oficial + sua cesta de gastos</span>
+    <h1 class="k" style="margin-top:20px">A inflação que você <em>realmente sente.</em></h1>
+    <p class="lead">Compare o IPCA oficial com a inflação do seu próprio orçamento, com dados do Banco Central e do IBGE.</p>
+    <div class="ct"><a class="pill" href="/app">Abrir o sistema <i>↗</i></a><a class="pill gh" href="#/como-funciona">Ver como funciona</a></div></div>
+    <div class="nm"><div><b>02</b><span>Calculadoras<br>em um só lugar</span></div><div><b>02</b><span>Fontes oficiais<br>BCB e IBGE</span></div></div></div></div>
+  <div class="wm" aria-hidden="true">InflateIQ</div>
+  <div class="fl">
+    <div class="gl gc"><span class="lb">Sua inflação</span><strong>6,8%</strong><div class="br"><u style="height:30%"></u><u style="height:45%"></u><u style="height:38%"></u><u style="height:62%"></u><u style="height:55%"></u><u style="height:80%"></u><u style="height:100%"></u></div></div>
+    <div class="gl gc"><span class="lb">IPCA oficial</span><strong>4,5%</strong><div class="br gr"><u style="height:25%"></u><u style="height:40%"></u><u style="height:30%"></u><u style="height:48%"></u><u style="height:52%"></u><u style="height:60%"></u><u style="height:68%"></u></div></div>
+  </div>
+</div>
+<div class="ds"><div class="w"><span class="lb">Dados oficiais de</span><span>Banco Central do Brasil</span><span>IBGE</span><span>SGS 433</span><span>SIDRA 7060</span></div></div>
+<section><div class="w">
+  <div class="hd"><div><span class="tag">Explore</span><h2 class="k nd-on" style="margin-top:18px">Tudo sobre o seu orçamento.</h2></div><p>Conheça cada parte do InflateIQ antes de abrir o sistema.</p></div>
+  <div class="ls">
+    <a class="lk" href="#/ferramentas"><span>[01]</span><h3>Ferramentas</h3><b class="ci">→</b></a>
+    <a class="lk" href="#/como-funciona"><span>[02]</span><h3>Como funciona</h3><b class="ci">→</b></a>
+    <a class="lk" href="#/dados"><span>[03]</span><h3>Dados oficiais</h3><b class="ci">→</b></a>
+    <a class="lk" href="#/telas"><span>[04]</span><h3>Telas do sistema</h3><b class="ci">→</b></a>
+  </div>
+</div></section>
+<section style="padding-top:0"><div class="w">
+  <div class="hd"><h2 class="k nd-on">Dois números. Uma diferença que pesa.</h2><p>Quando a sua cesta foge da média, o IPCA deixa de contar a sua história.</p></div>
+  <div class="cd">
+    <div class="c y"><strong>6,8%</strong><div><h4>Sua inflação pessoal</h4><p>Calculada a partir do que você realmente gasta, item por item.</p></div></div>
+    <div class="c w2"><strong>4,5%</strong><div><h4>IPCA oficial</h4><p>A média ponderada nacional, medida pelo IBGE.</p></div></div>
+    <div class="c d"><strong>R$ 680</strong><div><h4>Poder de compra de R$ 1.000</h4><p>Dinheiro parado perde valor real a cada mês.</p></div></div>
+  </div><p class="cp">Exemplos ilustrativos. Os valores não representam um período real.</p>
+</div></section>
+</div>
+
+<!-- FERRAMENTAS -->
+<div class="pg" id="ferramentas"><div class="top"><div class="w">
+  <div class="ct2"><span class="tag">Ferramentas</span><h2 class="i" style="font-size:clamp(34px,5vw,56px)">Duas calculadoras,<br>uma visão completa.</h2><p>Use o índice oficial como referência ou descubra o impacto real dos preços no seu dia a dia.</p></div>
+  <div class="g2">
+    <div class="gl tl"><div class="t"><span class="lb">Oficial</span><span class="lb">01</span></div><h3 class="k nd-on">Calculadora IPCA</h3>
+      <div class="fld"><span>Valor inicial</span><b>R$ 1.000,00</b></div><div class="fld"><span>De</span><b>01/2020</b></div><div class="fld"><span>Até</span><b>09/2026</b></div>
+      <p style="color:var(--t2);font-size:12.5px;margin:14px 0 20px">Atualize valores históricos pela inflação oficial e veja como o poder de compra mudou.</p><a class="pill sm" href="/app">Corrigir um valor <i>↗</i></a></div>
+    <div class="gl tl"><div class="t"><span class="lb">Do seu jeito</span><span class="lb">02</span></div><h3 class="k nd-on">Inflação pessoal</h3>
+      <div class="fld"><span>Arroz</span><b>R$ 80,00</b></div><div class="fld"><span>Gasolina</span><b>R$ 300,00</b></div><div class="fld"><span>Aluguel</span><b>R$ 1.200,00</b></div>
+      <div class="rs"><div class="y"><span class="lb">Sua inflação</span><br><b>6,8%</b></div><div><span class="lb">IPCA</span><br><b>4,5%</b></div></div><a class="pill sm" href="/app">Montar minha cesta <i>↗</i></a></div>
+  </div><p class="cp">Exemplos ilustrativos. O cálculo real acontece dentro do sistema.</p>
+  <div class="bt">
+    <div class="gl g"><div class="ar">IBGE</div><h3>Somente itens oficiais</h3><p>Só entra o que o IBGE acompanha.</p></div>
+    <div class="gl g"><div class="ar">Σ</div><h3>Pesos automáticos</h3><p>Seus gastos viram média ponderada.</p></div>
+    <div class="gl g"><div class="ar">↺</div><h3>Histórico salvo</h3><p>Retome qualquer cálculo depois.</p></div>
+  </div>
+</div></div></div>
+
+<!-- COMO FUNCIONA -->
+<div class="pg" id="como-funciona"><div class="top"><div class="w"><div class="cm">
+  <div><span class="tag">Como funciona</span><h2 class="k nd-on" style="margin:18px 0 26px">Do gasto ao resultado em quatro passos.</h2>
+    <div class="ls">
+      <details><summary><span>[01]</span><h3>Escolha os itens</h3><b class="ci">→</b></summary><div class="bd"><span></span><p>Busque arroz, gasolina, aluguel, plano de saúde e outros itens da lista oficial do IBGE.</p></div></details>
+      <details open><summary><span>[02]</span><h3>Informe os gastos</h3><b class="ci">→</b></summary><div class="bd"><span></span><div><p>Digite quanto você gasta por mês em cada item, em reais. Sem porcentagens, sem planilha.</p><a class="pill sm" href="/app">Montar minha cesta <i>↗</i></a></div></div></details>
+      <details><summary><span>[03]</span><h3>Cálculo automático</h3><b class="ci">→</b></summary><div class="bd"><span></span><p>O sistema converte os gastos em pesos e busca a variação de preço de cada item no período.</p></div></details>
+      <details><summary><span>[04]</span><h3>Compare com o IPCA</h3><b class="ci">→</b></summary><div class="bd"><span></span><p>Veja a sua inflação ao lado do IPCA oficial e guarde o resultado no histórico.</p></div></details>
+    </div></div>
+  <div class="gl pw" style="margin-top:50px"><span class="lb">Exemplo ilustrativo</span><div style="font-size:17px;font-weight:500;margin:10px 0 8px">Pesos da sua cesta</div>
+    <div class="row">Arroz<b>5,1%</b></div><div class="bar"><i style="width:5%"></i></div>
+    <div class="row">Gasolina<b>19,0%</b></div><div class="bar"><i style="width:19%"></i></div>
+    <div class="row">Aluguel<b>75,9%</b></div><div class="bar"><i style="width:76%"></i></div>
+    <div class="fm">Inflação pessoal = Σ (Vᵢ × Pᵢ)</div></div>
+</div></div></div></div>
+
+<!-- DADOS -->
+<div class="pg" id="dados"><div class="top"><div class="w">
+  <div class="ct2"><span class="tag">Dados oficiais</span><h2 class="i" style="font-size:clamp(34px,5vw,52px)">Números de quem mede<br>a inflação do país.</h2><p>Fontes públicas, séries históricas e variação por produto, reunidas no mesmo cálculo.</p></div>
+  <div class="dg">
+    <div class="gl"><div class="ar">BCB</div><div><h3>Banco Central</h3><small>Fonte do IPCA</small></div></div>
+    <div class="gl"><div class="ar">IBGE</div><div><h3>IBGE SIDRA</h3><small>Variação por produto</small></div></div>
+    <div class="gl"><div class="ar">433</div><div><h3>SGS 433</h3><small>IPCA geral mensal</small></div></div>
+    <div class="gl"><div class="ar">7060</div><div><h3>Tabela 7060</h3><small>Grupos e subitens</small></div></div>
+    <div class="gl"><div class="ar">↺</div><div><h3>Série histórica</h3><small>Mês a mês</small></div></div>
+  </div>
+</div></div></div>
+
+<!-- TELAS -->
+<div class="pg" id="telas"><div class="top"><div class="w">
+  <div class="hd"><div><span class="tag">Telas do sistema</span><h2 class="k nd-on" style="margin-top:18px">Conheça por dentro.</h2></div><p>Três telas pensadas para chegar ao resultado sem complicação.</p></div>
+  <div class="sc">
+    <div class="gl" style="min-height:440px"><span class="lb">01 · Entrar</span><div style="text-align:center;margin:20px 0"><img src="/landing/icon.png" alt="" style="width:48px;border-radius:14px"><div style="font-weight:500;font-size:17px;margin-top:10px">InflateIQ</div></div><div class="fld"><span>E-mail</span></div><div class="fld"><span>Senha</span><b>••••••••</b></div><div class="bt2">Entrar</div><div style="text-align:center;color:var(--mu);font-size:11px;margin-top:12px">Criar conta · Esqueci a senha</div></div>
+    <div class="gl" style="min-height:520px"><span class="lb">02 · Início</span><div style="font-size:22px;font-weight:500;line-height:1.2;margin-top:8px">O que você quer calcular?</div>
+      <div class="yb"><div><small>INFLAÇÃO NÃO É IGUAL PARA TODO MUNDO</small><strong>Seu orçamento merece uma medida própria.</strong></div><div class="ch">IPCA<u style="width:55%;background:#aaa"></u><br><br>VOCÊ<u style="width:78%;background:var(--y)"></u></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="fld" style="display:block"><span class="lb">Oficial</span><br><b>Calculadora IPCA</b></div><div class="fld" style="display:block"><span class="lb">Do seu jeito</span><br><b>Inflação pessoal</b></div></div>
+      <div class="lb" style="margin:14px 0 8px">Cálculos recentes</div><div class="fld"><span>Jan/2025 até Dez/2025</span><b style="color:var(--y)">5,12%</b></div><div class="fld"><span>Jan/2024 até Dez/2024</span><b style="color:var(--y)">4,38%</b></div><p class="cp" style="margin:0">valores ilustrativos</p></div>
+    <div class="gl" style="min-height:440px"><span class="lb">03 · Inflação pessoal</span><div style="font-size:17px;font-weight:500;margin:8px 0 14px">Sua cesta</div><div class="fld"><span>Arroz</span><b>R$ 80</b></div><div class="fld"><span>Gasolina</span><b>R$ 300</b></div><div class="fld"><span>Aluguel</span><b>R$ 1.200</b></div><div class="fld" style="border-style:dashed"><span>+ Adicionar item</span></div><div class="rs"><div class="y"><span class="lb">Você</span><br><b>6,8%</b></div><div><span class="lb">IPCA</span><br><b>4,5%</b></div></div></div>
+  </div>
+</div></div></div>
+
+<!-- PERGUNTAS -->
+<div class="pg" id="perguntas"><div class="top"><div class="w">
+  <div class="ct2"><span class="tag">Perguntas</span><h2 class="i" style="font-size:clamp(34px,5vw,52px)">Tire suas dúvidas.</h2></div>
+  <div class="fq">
+    <details open><summary>O que é inflação pessoal?</summary><p>É a variação de preços calculada a partir da sua própria cesta de gastos. Quem gasta mais com aluguel sente uma inflação diferente de quem gasta mais com transporte.</p></details>
+    <details><summary>De onde vêm os dados?</summary><p>O IPCA vem da série histórica do Banco Central (SGS 433). A variação por produto vem do IBGE (SIDRA, Tabela 7060).</p></details>
+    <details><summary>Preciso criar uma conta?</summary><p>Sim. Com e-mail e senha você acessa o sistema e mantém o histórico dos seus cálculos. Há recuperação de senha por e-mail.</p></details>
+    <details><summary>Funciona no celular?</summary><p>Sim. O sistema se adapta ao computador e ao celular e funciona direto no navegador.</p></details>
+  </div>
+</div></div></div>
+</main>
+
+<div class="fn"><div class="w"><span class="tag">Comece agora</span><h2 class="k nd-on">Descubra a inflação que você realmente sente.</h2><a class="pill" href="/app">Abrir o sistema <i>↗</i></a></div>
+  <div class="wm" aria-hidden="true">InflateIQ</div>
+  <div class="ft"><span>© <span id="y">2026</span> InflateIQ. Exemplos com valores ilustrativos.</span><div><a href="https://www.bcb.gov.br" target="_blank" rel="noopener">Banco Central</a><a href="https://www.ibge.gov.br" target="_blank" rel="noopener">IBGE</a><a href="/app">Entrar</a></div></div></div>
+
+<script>
+(function(){
+document.getElementById('y').textContent=new Date().getFullYear();
+// "D" recortado nos títulos grandes
+function walk(n){if(n.nodeType===3){if(/[dD]/.test(n.nodeValue)){var f=document.createDocumentFragment();n.nodeValue.split(/(\s+)/).forEach(function(t){if(!/[dD]/.test(t)||/^\s+$/.test(t)){f.appendChild(document.createTextNode(t));return}var w=document.createElement('span');w.style.whiteSpace='nowrap';t.split(/([dD])/).forEach(function(p){if(/^[dD]$/.test(p)){var s=document.createElement('span');s.className='nd';s.setAttribute('aria-hidden','true');w.appendChild(s)}else if(p)w.appendChild(document.createTextNode(p))});f.appendChild(w)});n.parentNode.replaceChild(f,n)}}else if(n.nodeType===1){Array.prototype.slice.call(n.childNodes).forEach(walk)}}
+document.querySelectorAll('.nd-on').forEach(function(h){h.setAttribute('aria-label',h.textContent);walk(h)});
+// páginas por hash (#/ferramentas ...)
+var pgs=document.querySelectorAll('.pg'),links=document.querySelectorAll('#nav a'),nav=document.getElementById('nav');
+function rota(){var id=(location.hash.replace(/^#\/?/,'')||'inicio');if(!document.getElementById(id))id='inicio';
+ pgs.forEach(function(p){p.classList.toggle('on',p.id===id)});
+ links.forEach(function(a){a.classList.toggle('on',a.dataset.p===id)});
+ nav.classList.remove('op');window.scrollTo(0,0)}
+addEventListener('hashchange',rota);rota();
+document.getElementById('mb').onclick=function(){nav.classList.toggle('op')};
+})();
+</script>
+</body>
+</html>

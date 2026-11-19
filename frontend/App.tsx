@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
-  Animated,
   Linking,
   Platform,
   StyleSheet,
@@ -18,14 +17,13 @@ import PasswordResetScreen from './src/screens/PasswordResetScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { BrandMark } from './src/components/Brand';
-import { UserBar, UserCard } from './src/components/UserPanel';
+import { UserCard } from './src/components/UserPanel';
 import { useIsDesktop } from './src/hooks/useLayout';
 import { Colors, ThemeProvider, useTheme } from './src/theme';
 
 const SIDEBAR_WIDTH = 350;
-const DRAWER_WIDTH = 280;
 
-type Tela = 'inicio' | 'oficial' | 'pessoal';
+type Tela = 'inicio' | 'oficial' | 'pessoal' | 'conta';
 
 export default function App() {
   return (
@@ -150,6 +148,155 @@ function Navegacao({
   );
 }
 
+// Ícones das abas, desenhados com Views (sem biblioteca de ícones).
+// Todos ocupam a mesma caixa de 22 x 22 para ficarem com o mesmo tamanho.
+const ICONE = 22;
+
+function IconeAba({ id, cor, fundo }: { id: Tela; cor: string; fundo: string }) {
+  const caixa = { width: ICONE, height: ICONE, alignItems: 'center' as const };
+
+  if (id === 'inicio') {
+    // casa: telhado + corpo com porta
+    return (
+      <View style={[caixa, { justifyContent: 'flex-end' }]}>
+        <View
+          style={{
+            width: 0,
+            height: 0,
+            borderLeftWidth: 11,
+            borderRightWidth: 11,
+            borderBottomWidth: 9,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderBottomColor: cor,
+          }}
+        />
+        <View style={{ width: 16, height: 12, backgroundColor: cor, borderBottomLeftRadius: 2, borderBottomRightRadius: 2 }}>
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 5.5,
+              width: 5,
+              height: 7,
+              backgroundColor: fundo,
+              borderTopLeftRadius: 2,
+              borderTopRightRadius: 2,
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  if (id === 'oficial') {
+    // barras crescendo (índice oficial)
+    return (
+      <View style={[caixa, { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }]}>
+        <View style={{ width: 6, height: 9, borderRadius: 2, backgroundColor: cor }} />
+        <View style={{ width: 6, height: 14, borderRadius: 2, backgroundColor: cor }} />
+        <View style={{ width: 6, height: 21, borderRadius: 2, backgroundColor: cor }} />
+      </View>
+    );
+  }
+
+  if (id === 'pessoal') {
+    // alvo: anel com ponto no centro
+    return (
+      <View style={[caixa, { justifyContent: 'center' }]}>
+        <View
+          style={{
+            width: ICONE,
+            height: ICONE,
+            borderRadius: ICONE / 2,
+            borderWidth: 3,
+            borderColor: cor,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: cor }} />
+        </View>
+      </View>
+    );
+  }
+
+  // conta: pessoa (cabeça + ombros)
+  return (
+    <View style={[caixa, { justifyContent: 'space-between' }]}>
+      <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: cor }} />
+      <View
+        style={{
+          width: 18,
+          height: 9,
+          borderTopLeftRadius: 9,
+          borderTopRightRadius: 9,
+          borderBottomLeftRadius: 2,
+          borderBottomRightRadius: 2,
+          backgroundColor: cor,
+        }}
+      />
+    </View>
+  );
+}
+
+// Barra de abas fixa embaixo (celular): um ícone por tela, a aba ativa fica em amarelo.
+function BarraAbas({
+  telaAtiva,
+  onSelecionar,
+  styles,
+}: {
+  telaAtiva: Tela;
+  onSelecionar: (t: Tela) => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const { colors } = useTheme();
+  const abas: { id: Tela; rotulo: string }[] = [
+    { id: 'inicio', rotulo: 'Início' },
+    { id: 'oficial', rotulo: 'IPCA' },
+    { id: 'pessoal', rotulo: 'Pessoal' },
+    { id: 'conta', rotulo: 'Conta' },
+  ];
+  return (
+    <View style={styles.barraAbas}>
+      {abas.map((aba) => {
+        const ativo = telaAtiva === aba.id;
+        return (
+          <TouchableOpacity
+            key={aba.id}
+            style={styles.aba}
+            onPress={() => onSelecionar(aba.id)}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: ativo }}
+            accessibilityLabel={aba.rotulo}
+          >
+            <View style={[styles.abaIcone, ativo && styles.abaIconeAtivo]}>
+              <IconeAba id={aba.id} cor={ativo ? colors.onPrimary : colors.textMuted} fundo={ativo ? colors.primary : colors.surface} />
+            </View>
+            <Text style={[styles.abaRotulo, ativo && styles.abaRotuloAtivo]}>{aba.rotulo}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// Aba "Conta" (celular): quem está conectado, tema e sair.
+function ContaScreen({ styles }: { styles: ReturnType<typeof createStyles> }) {
+  const { isDark, toggleTheme } = useTheme();
+  return (
+    <View style={styles.contaTela}>
+      <Text style={styles.contaTitulo}>Conta</Text>
+      <UserCard />
+      <TouchableOpacity style={styles.temaLinha} onPress={toggleTheme} activeOpacity={0.8}>
+        <Text style={styles.navLabel}>Tema {isDark ? 'escuro' : 'claro'}</Text>
+        <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function AppContent() {
   const { colors, isDark, toggleTheme } = useTheme();
   const desktop = useIsDesktop();
@@ -158,42 +305,20 @@ function AppContent() {
   // Cada login começa na home, onde a pessoa escolhe uma calculadora.
   const [telaAtiva, setTelaAtiva] = useState<Tela>('inicio');
 
-  const [menuAberto, setMenuAberto] = useState(false);
-
-  // Animação do menu lateral (celular) e do fundo escurecido
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const toggleMenu = (abrir: boolean) => {
-    if (abrir) {
-      setMenuAberto(true);
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start(() => {
-        setMenuAberto(false);
-      });
-    }
-  };
-
   const selecionarTela = (tela: Tela) => {
     setTelaAtiva(tela);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       localStorage.setItem('@aba_ativa', tela);
     }
-    if (menuAberto) toggleMenu(false);
   };
 
   const conteudo = telaAtiva === 'inicio'
     ? <HomeScreen onSelecionar={selecionarTela} />
     : telaAtiva === 'oficial'
       ? <CalculadoraIpcaScreen />
-      : <InflacaoPessoalScreen />;
+      : telaAtiva === 'pessoal'
+        ? <InflacaoPessoalScreen />
+        : <ContaScreen styles={styles} />;
 
   // ---------- Computador: sidebar fixa, com usuário e "Sair" no rodapé ----------
   if (desktop) {
@@ -212,55 +337,22 @@ function AppContent() {
     );
   }
 
-  // ---------- Celular: topbar + menu deslizante + barra do usuário embaixo ----------
+  // ---------- Celular: topbar + conteúdo + barra de abas embaixo ----------
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => toggleMenu(!menuAberto)}
-          activeOpacity={0.7}
-          accessibilityLabel="Abrir menu"
-        >
-          <View style={styles.hamburgerIcon}>
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
-          </View>
-        </TouchableOpacity>
-
         <BrandMark size={32} />
         <Text style={styles.topBarTitle} numberOfLines={1}>
           InflateIQ
         </Text>
-
         <TouchableOpacity style={styles.iconButton} onPress={toggleTheme} activeOpacity={0.7}>
           <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.mainLayout}>
-        {menuAberto && (
-          <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => toggleMenu(false)} />
-          </Animated.View>
-        )}
+      <View style={styles.conteudo}>{conteudo}</View>
 
-        <Animated.View
-          style={[
-            styles.drawer,
-            !menuAberto && { boxShadow: 'none' },
-            { transform: [{ translateX: slideAnim }] },
-          ]}
-        >
-          <SidebarHeader styles={styles} />
-          <Navegacao telaAtiva={telaAtiva} onSelecionar={selecionarTela} styles={styles} />
-        </Animated.View>
-
-        <View style={styles.conteudo}>{conteudo}</View>
-      </View>
-
-      <UserBar />
+      <BarraAbas telaAtiva={telaAtiva} onSelecionar={selecionarTela} styles={styles} />
     </SafeAreaView>
   );
 }
@@ -290,7 +382,6 @@ const createStyles = (c: Colors) =>
       gap: 12,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
-      zIndex: 30,
     },
     iconButton: {
       width: 40,
@@ -302,35 +393,40 @@ const createStyles = (c: Colors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    hamburgerIcon: { width: 16, height: 12, justifyContent: 'space-between' },
-    hamburgerLine: { width: '100%', height: 2, backgroundColor: c.text, borderRadius: 2 },
     themeIcon: { fontSize: 16 },
     topBarTitle: { flex: 1, color: c.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
-    mainLayout: { flex: 1, position: 'relative' },
-    backdrop: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: c.overlay,
-      zIndex: 10,
-    },
-    drawer: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      width: DRAWER_WIDTH,
+
+    // barra de abas (celular)
+    barraAbas: {
+      flexDirection: 'row',
       backgroundColor: c.surface,
-      borderRightWidth: 1,
-      borderRightColor: c.border,
-      padding: 20,
-      zIndex: 20,
-      boxShadow: '8px 0px 30px rgba(0, 0, 0, 0.25)',
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      paddingTop: 8,
+      paddingBottom: 8,
+      paddingHorizontal: 8,
+    },
+    aba: { flex: 1, alignItems: 'center', gap: 4 },
+    abaIcone: { width: 48, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    abaIconeAtivo: { backgroundColor: c.primary },
+    abaRotulo: { fontSize: 11, fontWeight: '600', color: c.textMuted },
+    abaRotuloAtivo: { color: c.text, fontWeight: '800' },
+
+    // aba Conta
+    contaTela: { flex: 1, padding: 18, gap: 16 },
+    contaTitulo: { color: c.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 6 },
+    temaLinha: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
     },
 
-    // compartilhado (sidebar fixa e menu deslizante)
+    // sidebar fixa (computador)
     sidebarHeader: {
       flexDirection: 'row',
       alignItems: 'center',
