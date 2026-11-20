@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, useTheme } from '../theme';
 import { PageHeader } from '../components/PageHeader';
+import { SeletorMesAno } from '../components/SeletorMesAno';
 import { useIsDesktop } from '../hooks/useLayout';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { buscarUltimoIpca, calcularCorrecaoBackend, CorrecaoResponseDTO } from '../services/api';
@@ -123,6 +124,11 @@ export default function CalculadoraIpcaScreen() {
     }
   }
 
+  // Limite do seletor: último IPCA publicado (ou o mês atual, se ainda não carregou)
+  const hoje = new Date();
+  const limiteAno = ultimoIpcaData ? Number(ultimoIpcaData.ano) : hoje.getFullYear();
+  const limiteMes = ultimoIpcaData ? Number(ultimoIpcaData.mes) : hoje.getMonth() + 1;
+
   const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const formulario = (
@@ -137,30 +143,18 @@ export default function CalculadoraIpcaScreen() {
         onChangeText={setValor}
       />
 
-      <Text style={styles.label}>Data Inicial (MM/AAAA)</Text>
-      <View style={styles.linhaInputs}>
-        <TextInput
-          style={[styles.input, styles.inputPequeno]}
-          placeholder="MM"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          maxLength={2}
-          value={mesInicio}
-          onChangeText={setMesInicio}
-        />
-        <TextInput
-          style={[styles.input, styles.inputPequeno]}
-          placeholder="AAAA"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          maxLength={4}
-          value={anoInicio}
-          onChangeText={setAnoInicio}
-        />
-      </View>
+      <Text style={styles.label}>Data Inicial</Text>
+      <SeletorMesAno
+        titulo="Data inicial"
+        mes={mesInicio}
+        ano={anoInicio}
+        onChange={(m, a) => { setMesInicio(m); setAnoInicio(a); }}
+        anoMax={limiteAno}
+        mesMax={limiteMes}
+      />
 
       <View style={styles.headerDataFinal}>
-        <Text style={[styles.label, styles.labelSemMargem]}>Data Final (MM/AAAA)</Text>
+        <Text style={[styles.label, styles.labelSemMargem]}>Data Final</Text>
 
         <TouchableOpacity
           style={styles.checkboxContainer}
@@ -174,26 +168,15 @@ export default function CalculadoraIpcaScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.linhaInputs, usarDataAtual && styles.inputsDesabilitados]}>
-        <TextInput
-          style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
-          placeholder="MM"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          maxLength={2}
-          value={mesFim}
-          onChangeText={setMesFim}
-          editable={!usarDataAtual}
-        />
-        <TextInput
-          style={[styles.input, styles.inputPequeno, usarDataAtual && styles.inputDisabledStyle]}
-          placeholder="AAAA"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          maxLength={4}
-          value={anoFim}
-          onChangeText={setAnoFim}
-          editable={!usarDataAtual}
+      <View style={usarDataAtual && styles.inputsDesabilitados}>
+        <SeletorMesAno
+          titulo="Data final"
+          mes={mesFim}
+          ano={anoFim}
+          onChange={(m, a) => { setMesFim(m); setAnoFim(a); }}
+          anoMax={limiteAno}
+          mesMax={limiteMes}
+          desabilitado={usarDataAtual}
         />
       </View>
 
