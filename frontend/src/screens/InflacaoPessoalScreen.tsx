@@ -16,10 +16,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, useTheme } from '../theme';
 import { PageHeader } from '../components/PageHeader';
+import { SeletorMesAno } from '../components/SeletorMesAno';
 import { useIsDesktop } from '../hooks/useLayout';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
   buscarCategoriasIpca,
+  buscarUltimoIpca,
   calcularInflacaoPessoal,
   buscarHistoricoCalculos,
   CategoriaIpca,
@@ -280,6 +282,20 @@ export default function InflacaoPessoalScreen() {
   const [mesFim, setMesFim] = useState('07');
   const [anoFim, setAnoFim] = useState('2026');
 
+  // Limite do calendário: último IPCA publicado (ou o mês atual, enquanto não carrega)
+  const [ultimoIpca, setUltimoIpca] = useState<{ ano: number; mes: number } | null>(null);
+  useEffect(() => {
+    buscarUltimoIpca()
+      .then((d) => {
+        const partes = d?.dataReferencia?.split('-');
+        if (partes && partes.length >= 2) setUltimoIpca({ ano: Number(partes[0]), mes: Number(partes[1]) });
+      })
+      .catch((e) => console.warn('Não foi possível carregar a última data do IPCA', e));
+  }, []);
+  const hoje = new Date();
+  const limiteAno = ultimoIpca ? ultimoIpca.ano : hoje.getFullYear();
+  const limiteMes = ultimoIpca ? ultimoIpca.mes : hoje.getMonth() + 1;
+
   const [loading, setLoading] = useState(true);
   const [calculando, setCalculando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -517,39 +533,27 @@ export default function InflacaoPessoalScreen() {
       <View style={styles.periodoContainer}>
         <Text style={styles.labelPeriodo}>Período de Análise</Text>
         <View style={styles.datasRow}>
-          <View style={styles.dataInputGroup}>
-            <TextInput
-              style={styles.inputData}
-              value={mesInicio}
-              onChangeText={setMesInicio}
-              keyboardType="numeric"
-              maxLength={2}
-            />
-            <Text style={styles.barraData}>/</Text>
-            <TextInput
-              style={styles.inputDataAno}
-              value={anoInicio}
-              onChangeText={setAnoInicio}
-              keyboardType="numeric"
-              maxLength={4}
+          <View style={styles.dataSeletor}>
+            <SeletorMesAno
+              titulo="Data inicial"
+              mes={mesInicio}
+              ano={anoInicio}
+              onChange={(m, a) => { setMesInicio(m); setAnoInicio(a); }}
+              anoMax={limiteAno}
+              mesMax={limiteMes}
+              compacto
             />
           </View>
           <Text style={styles.ateTexto}>até</Text>
-          <View style={styles.dataInputGroup}>
-            <TextInput
-              style={styles.inputData}
-              value={mesFim}
-              onChangeText={setMesFim}
-              keyboardType="numeric"
-              maxLength={2}
-            />
-            <Text style={styles.barraData}>/</Text>
-            <TextInput
-              style={styles.inputDataAno}
-              value={anoFim}
-              onChangeText={setAnoFim}
-              keyboardType="numeric"
-              maxLength={4}
+          <View style={styles.dataSeletor}>
+            <SeletorMesAno
+              titulo="Data final"
+              mes={mesFim}
+              ano={anoFim}
+              onChange={(m, a) => { setMesFim(m); setAnoFim(a); }}
+              anoMax={limiteAno}
+              mesMax={limiteMes}
+              compacto
             />
           </View>
         </View>
@@ -666,8 +670,17 @@ export default function InflacaoPessoalScreen() {
           <Text style={styles.warningIcon}>⚠️</Text>
           <View style={styles.warningContent}>
             <Text style={styles.warningTextPrefix}>
-              {resultado.mensagemAviso}
+              {resultado.itensAvisoDesconsiderados?.textoPrefixo || 'Alguns itens foram desconsiderados:'}
             </Text>
+            {resultado.itensAvisoDesconsiderados?.itens && resultado.itensAvisoDesconsiderados.itens.length > 0 && (
+              <View style={styles.warningBadgesRow}>
+                {resultado.itensAvisoDesconsiderados.itens.map((item: string, idx: number) => (
+                  <View key={idx} style={styles.warningBadgeItem}>
+                    <Text style={styles.warningBadgeText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -914,6 +927,7 @@ const createStyles = (c: Colors) =>
     periodoContainer: { marginBottom: 4 },
     labelPeriodo: { color: c.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8 },
     datasRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dataSeletor: { flex: 1, minWidth: 0 },
     dataInputGroup: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -945,55 +959,28 @@ const createStyles = (c: Colors) =>
     nomeGrupoGrid: { color: c.text, fontSize: 12, textAlign: 'center', fontWeight: '600' },
 
     boxInsercaoValor: {
-      marginTop: 20,
-      backgroundColor: c.surfaceAlt,
+      backgroundColor: c.primarySoft,
       borderRadius: 18,
-      borderWidth: 1,
-      borderColor: c.border, // Removemos qualquer destaque indesejado daqui
       padding: 18,
+      borderWidth: 1,
+      borderColor: c.primary,
+      marginTop: 16,
     },
-    itemSelecionadoLabel: {
-      color: c.textSecondary,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    itemSelecionadoNome: {
-      color: c.accent,
-      fontSize: 18,
-      fontWeight: '800',
-      marginTop: 2,
-      marginBottom: 14,
-    },
-    rowAdicionarValor: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
+    itemSelecionadoLabel: { color: c.textSecondary, fontSize: 12 },
+    itemSelecionadoNome: { color: c.accent, fontSize: 15, fontWeight: '800', marginTop: 2, marginBottom: 12 },
+    rowAdicionarValor: { flexDirection: 'row', gap: 12 },
     inputGastoWrapper: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: c.surface,
-      borderRadius: 14,
-      borderWidth: 1.5,
-      borderColor: c.primary, // A borda amarela agora envolve perfeitamente apenas o input de valor!
       paddingHorizontal: 14,
-      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
     },
-    prefixoMoeda: {
-      color: c.textSecondary,
-      fontSize: 15,
-      fontWeight: '600',
-      marginRight: 6,
-    },
-    inputGasto: {
-      flex: 1,
-      color: c.text,
-      fontSize: 16,
-      fontWeight: '700',
-      padding: 0,
-      outlineStyle: 'none', // Remove o outline nativo feio do navegador na web
-    } as any,
+    prefixoMoeda: { color: c.textMuted, marginRight: 6 },
+    inputGasto: { flex: 1, color: c.text, fontSize: 15, fontWeight: '700', paddingVertical: 13 },
     btnAdicionar: {
       backgroundColor: c.primary,
       paddingHorizontal: 18,
