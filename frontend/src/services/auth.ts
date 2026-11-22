@@ -9,6 +9,10 @@ export interface Usuario {
 
 const CHAVE_SESSAO = '@sessao';
 
+// Sessão mantida em memória: é o que faz o token funcionar no app Android,
+// onde o localStorage não existe. Na web continua espelhando no localStorage.
+let sessaoMemoria: Usuario | null = null;
+
 export async function solicitarRedefinicaoSenha(email: string): Promise<void> {
   let resposta: Response;
   try {
@@ -108,16 +112,16 @@ export async function criarConta(nome: string, email: string, senha: string): Pr
 // ---- Gestão de Sessão e Token ----
 
 export function lerSessao(): Usuario | null {
+  if (sessaoMemoria) return sessaoMemoria;
   try {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const bruto = window.localStorage.getItem(CHAVE_SESSAO);
-      if (!bruto) return null;
-      return JSON.parse(bruto) as Usuario;
+      if (bruto) sessaoMemoria = JSON.parse(bruto) as Usuario;
     }
   } catch {
     // armazenamento indisponível ou conteúdo inválido
   }
-  return null;
+  return sessaoMemoria;
 }
 
 export function obterToken(): string | null {
@@ -126,6 +130,7 @@ export function obterToken(): string | null {
 }
 
 export function salvarSessao(usuario: Usuario): void {
+  sessaoMemoria = usuario;
   try {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.localStorage.setItem(CHAVE_SESSAO, JSON.stringify(usuario));
@@ -136,6 +141,7 @@ export function salvarSessao(usuario: Usuario): void {
 }
 
 export function limparSessao(): void {
+  sessaoMemoria = null;
   try {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.localStorage.removeItem(CHAVE_SESSAO);
