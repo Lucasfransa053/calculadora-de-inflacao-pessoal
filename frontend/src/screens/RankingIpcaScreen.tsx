@@ -19,6 +19,9 @@ import {
   TipoRankingFront,
 } from '../services/api';
 
+// Categorias do IBGE (SIDRA, tabela 1419) começam em jan/2012
+const ANO_MIN_RANKING = 2012;
+
 const OPCOES_LIMITE = [10, 20, 50] as const;
 
 const formatarNomeItem = (nome: string) =>
@@ -107,6 +110,7 @@ export default function RankingIpcaScreen() {
                 mes={mesInicio}
                 ano={anoInicio}
                 onChange={(m, a) => { setMesInicio(m); setAnoInicio(a); }}
+                anoMin={ANO_MIN_RANKING}
                 anoMax={limiteAno}
                 mesMax={limiteMes}
                 compacto
@@ -119,6 +123,7 @@ export default function RankingIpcaScreen() {
                 mes={mesFim}
                 ano={anoFim}
                 onChange={(m, a) => { setMesFim(m); setAnoFim(a); }}
+                anoMin={ANO_MIN_RANKING}
                 anoMax={limiteAno}
                 mesMax={limiteMes}
                 compacto

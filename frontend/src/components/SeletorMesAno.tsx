@@ -26,7 +26,7 @@ type Props = {
 
 // Campo que abre um mini calendário de meses.
 // As setas trocam o ano de 1 em 1; tocar no ano abre uma grade para escolher o ano direto.
-export function SeletorMesAno({ mes, ano, onChange, anoMin = 1994, anoMax, mesMax, desabilitado, titulo, compacto }: Props) {
+export function SeletorMesAno({ mes, ano, onChange, anoMin = 1980, anoMax, mesMax, desabilitado, titulo, compacto }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [aberto, setAberto] = useState(false);

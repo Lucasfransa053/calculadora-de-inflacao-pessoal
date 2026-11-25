@@ -229,6 +229,9 @@ const SUBGRUPOS_POR_GRUPO: Record<string, SubgrupoUI[]> = {
   ],
 };
 
+// Inflação pessoal (IBGE/SIDRA, tabela 1419) começa em jan/2012
+const ANO_MIN_PESSOAL = 2012;
+
 const subgruposDoGrupo = (grupoId: string): SubgrupoUI[] => [
   ...(SUBGRUPOS_POR_GRUPO[grupoId] ?? []),
   { id: `outros-${grupoId}`, nome: 'Outros itens', icone: '📂', match: () => true },
@@ -539,6 +542,7 @@ export default function InflacaoPessoalScreen() {
               mes={mesInicio}
               ano={anoInicio}
               onChange={(m, a) => { setMesInicio(m); setAnoInicio(a); }}
+              anoMin={ANO_MIN_PESSOAL}
               anoMax={limiteAno}
               mesMax={limiteMes}
               compacto
@@ -551,6 +555,7 @@ export default function InflacaoPessoalScreen() {
               mes={mesFim}
               ano={anoFim}
               onChange={(m, a) => { setMesFim(m); setAnoFim(a); }}
+              anoMin={ANO_MIN_PESSOAL}
               anoMax={limiteAno}
               mesMax={limiteMes}
               compacto

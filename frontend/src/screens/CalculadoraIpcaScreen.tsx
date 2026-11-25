@@ -18,6 +18,9 @@ import { useIsDesktop } from '../hooks/useLayout';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { buscarUltimoIpca, calcularCorrecaoBackend, CorrecaoResponseDTO } from '../services/api';
 
+// IPCA geral (BCB/SGS 433) começa em jan/1980
+const ANO_MIN_IPCA = 1980;
+
 export default function CalculadoraIpcaScreen() {
   const { colors } = useTheme();
   const desktop = useIsDesktop();
@@ -68,7 +71,7 @@ export default function CalculadoraIpcaScreen() {
       return;
     }
 
-    if (!mesInicioNum || mesInicioNum < 1 || mesInicioNum > 12 || !anoInicioNum || anoInicioNum < 1994) {
+    if (!mesInicioNum || mesInicioNum < 1 || mesInicioNum > 12 || !anoInicioNum || anoInicioNum < ANO_MIN_IPCA) {
       setErroCalculo('Informe um mês/ano inicial válido.');
       return;
     }
@@ -89,7 +92,7 @@ export default function CalculadoraIpcaScreen() {
       mesFimNum = Number(mesFim);
       anoFimNum = Number(anoFim);
 
-      if (!mesFimNum || mesFimNum < 1 || mesFimNum > 12 || !anoFimNum || anoFimNum < 1994) {
+      if (!mesFimNum || mesFimNum < 1 || mesFimNum > 12 || !anoFimNum || anoFimNum < ANO_MIN_IPCA) {
         setErroCalculo('Informe um mês/ano final válido.');
         return;
       }
@@ -149,6 +152,7 @@ export default function CalculadoraIpcaScreen() {
         mes={mesInicio}
         ano={anoInicio}
         onChange={(m, a) => { setMesInicio(m); setAnoInicio(a); }}
+        anoMin={ANO_MIN_IPCA}
         anoMax={limiteAno}
         mesMax={limiteMes}
       />
@@ -174,6 +178,7 @@ export default function CalculadoraIpcaScreen() {
           mes={mesFim}
           ano={anoFim}
           onChange={(m, a) => { setMesFim(m); setAnoFim(a); }}
+          anoMin={ANO_MIN_IPCA}
           anoMax={limiteAno}
           mesMax={limiteMes}
           desabilitado={usarDataAtual}

@@ -239,14 +239,13 @@ export async function buscarRankingIpca(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const query = new URLSearchParams({
-    inicio: params.inicio,
-    fim: params.fim,
-    tipo: params.tipo,
-    limite: String(params.limite),
-  });
+  const query =
+    `inicio=${encodeURIComponent(params.inicio)}` +
+    `&fim=${encodeURIComponent(params.fim)}` +
+    `&tipo=${encodeURIComponent(params.tipo)}` +
+    `&limite=${params.limite}`;
 
-  const response = await fetch(`${API_BASE_URL}/ranking-ipca?${query.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/ranking-ipca?${query}`, {
     headers,
   });
 

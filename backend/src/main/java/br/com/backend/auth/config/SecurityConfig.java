@@ -36,8 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Libera rotas de autenticação (cobring o prefixo /api/auth e /auth)
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
-                        // Libera rotas públicas de consulta ao IPCA
-                        .requestMatchers("/api/ipca/**", "/api/inflacao-pessoal/categorias/**").permitAll()
+                        // Libera rotas públicas de consulta ao IPCA (inclui o ranking)
+                        .requestMatchers("/api/ipca/**", "/api/inflacao-pessoal/categorias/**", "/api/ranking-ipca/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
