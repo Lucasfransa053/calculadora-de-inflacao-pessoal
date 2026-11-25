@@ -90,6 +90,22 @@ export interface HistoricoCalculoDTO {
   itens: ItemHistoricoDTO[];
 }
 
+export type TipoRankingFront = 'ALTA' | 'QUEDA';
+
+export interface RankingCategoriaDTO {
+  categoriaId: string;
+  categoriaNome: string;
+  qtdMeses: number;
+  variacaoAcumuladaPct: number;
+}
+
+export interface BuscarRankingParams {
+  inicio: string; // "YYYY-MM-DD"
+  fim: string;    // "YYYY-MM-DD"
+  tipo: TipoRankingFront;
+  limite: number;
+}
+
 // ==========================================
 // FUNÇÕES DE REQUISIÇÃO
 // ==========================================
@@ -208,6 +224,35 @@ export async function buscarHistoricoCalculos(): Promise<HistoricoCalculoDTO[]> 
 
   if (!response.ok) {
     throw new Error('Falha ao carregar o histórico de cálculos.');
+  }
+
+  return response.json();
+}
+
+export async function buscarRankingIpca(
+  params: BuscarRankingParams
+): Promise<RankingCategoriaDTO[]> {
+  const token = obterToken();
+  const headers: Record<string, string> = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const query = new URLSearchParams({
+    inicio: params.inicio,
+    fim: params.fim,
+    tipo: params.tipo,
+    limite: String(params.limite),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/ranking-ipca?${query.toString()}`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Erro ao buscar ranking (${response.status})`);
   }
 
   return response.json();

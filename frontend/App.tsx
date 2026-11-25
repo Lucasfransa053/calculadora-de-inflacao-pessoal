@@ -15,6 +15,7 @@ import InflacaoPessoalScreen from './src/screens/InflacaoPessoalScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import PasswordResetScreen from './src/screens/PasswordResetScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import RankingIpcaScreen from './src/screens/RankingIpcaScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { BrandMark } from './src/components/Brand';
 import { UserCard } from './src/components/UserPanel';
@@ -23,7 +24,7 @@ import { Colors, ThemeProvider, useTheme } from './src/theme';
 
 const SIDEBAR_WIDTH = 350;
 
-type Tela = 'inicio' | 'oficial' | 'pessoal' | 'conta';
+type Tela = 'inicio' | 'oficial' | 'pessoal' | 'ranking' | 'conta';
 
 export default function App() {
   return (
@@ -126,6 +127,7 @@ function Navegacao({
     { id: 'inicio', icone: '⌂', rotulo: 'Início' },
     { id: 'oficial', icone: '↗', rotulo: 'IPCA Oficial' },
     { id: 'pessoal', icone: '◉', rotulo: 'Inflação Pessoal' },
+    { id: 'ranking', icone: '★', rotulo: 'Ranking' },
   ];
   return (
     <View>
@@ -221,6 +223,23 @@ function IconeAba({ id, cor, fundo }: { id: Tela; cor: string; fundo: string }) 
     );
   }
 
+  if (id === 'ranking') {
+    // estrela/destaque simples feito com Views
+    return (
+      <View style={[caixa, { alignItems: 'center', justifyContent: 'center' }]}>
+        <View
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: 4,
+            backgroundColor: cor,
+            transform: [{ rotate: '45deg' }],
+          }}
+        />
+      </View>
+    );
+  }
+
   // conta: pessoa (cabeça + ombros)
   return (
     <View style={[caixa, { justifyContent: 'space-between' }]}>
@@ -255,6 +274,7 @@ function BarraAbas({
     { id: 'inicio', rotulo: 'Início' },
     { id: 'oficial', rotulo: 'IPCA' },
     { id: 'pessoal', rotulo: 'Pessoal' },
+    { id: 'ranking', rotulo: 'Ranking' },
     { id: 'conta', rotulo: 'Conta' },
   ];
   return (
@@ -318,6 +338,8 @@ function AppContent() {
       ? <CalculadoraIpcaScreen />
       : telaAtiva === 'pessoal'
         ? <InflacaoPessoalScreen />
+        : telaAtiva === 'ranking'
+          ? <RankingIpcaScreen />
         : <ContaScreen styles={styles} />;
 
   // ---------- Computador: sidebar fixa, com usuário e "Sair" no rodapé ----------
