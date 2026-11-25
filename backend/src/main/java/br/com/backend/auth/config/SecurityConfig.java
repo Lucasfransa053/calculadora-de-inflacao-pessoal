@@ -38,6 +38,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         // Libera rotas públicas de consulta ao IPCA (inclui o ranking)
                         .requestMatchers("/api/ipca/**", "/api/inflacao-pessoal/categorias/**", "/api/ranking-ipca/**").permitAll()
+                        // Libera /error para o Spring mostrar o status real (404/500) em vez de 403
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

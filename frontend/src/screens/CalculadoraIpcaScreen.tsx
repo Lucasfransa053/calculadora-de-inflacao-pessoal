@@ -21,6 +21,22 @@ import { buscarUltimoIpca, calcularCorrecaoBackend, CorrecaoResponseDTO } from '
 // IPCA geral (BCB/SGS 433) começa em jan/1980
 const ANO_MIN_IPCA = 1980;
 
+// porReal = quantas unidades da moeda valem 1 real (conversões oficiais acumuladas)
+type Moeda = { simbolo: string; nome: string; porReal: number };
+
+const MOEDA_REAL: Moeda = { simbolo: 'R$', nome: 'Real', porReal: 1 };
+
+// Moeda vigente em cada época. A troca é considerada no mês em que a moeda nova entrou em vigor.
+function moedaDaEpoca(ano: number, mes: number): Moeda {
+  const aaaamm = ano * 100 + mes;
+  if (aaaamm >= 199407) return MOEDA_REAL;
+  if (aaaamm >= 199308) return { simbolo: 'CR$', nome: 'Cruzeiro Real', porReal: 2750 };
+  if (aaaamm >= 199003) return { simbolo: 'Cr$', nome: 'Cruzeiro', porReal: 2750 * 1000 };
+  if (aaaamm >= 198901) return { simbolo: 'NCz$', nome: 'Cruzado Novo', porReal: 2750 * 1000 };
+  if (aaaamm >= 198603) return { simbolo: 'Cz$', nome: 'Cruzado', porReal: 2750 * 1000 * 1000 };
+  return { simbolo: 'Cr$', nome: 'Cruzeiro', porReal: 2750 * 1000 * 1000 * 1000 };
+}
+
 export default function CalculadoraIpcaScreen() {
   const { colors } = useTheme();
   const desktop = useIsDesktop();
@@ -38,6 +54,7 @@ export default function CalculadoraIpcaScreen() {
 
   const [carregando, setCarregando] = useState(false);
   const [resultado, setResultado] = useState<CorrecaoResponseDTO | null>(null);
+  const [moedas, setMoedas] = useState<{ inicial: Moeda; final: Moeda }>({ inicial: MOEDA_REAL, final: MOEDA_REAL });
   const [erroCalculo, setErroCalculo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,6 +137,7 @@ export default function CalculadoraIpcaScreen() {
         dataFim: dataFimFormatted,
       });
       setResultado(res);
+      setMoedas({ inicial: moedaDaEpoca(anoInicioNum, mesInicioNum), final: moedaDaEpoca(anoFimNum, mesFimNum) });
     } catch (e) {
       setErroCalculo(e instanceof Error ? e.message : 'Erro ao conectar ao backend.');
     } finally {
@@ -132,11 +150,25 @@ export default function CalculadoraIpcaScreen() {
   const limiteAno = ultimoIpcaData ? Number(ultimoIpcaData.ano) : hoje.getFullYear();
   const limiteMes = ultimoIpcaData ? Number(ultimoIpcaData.mes) : hoje.getMonth() + 1;
 
-  const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatar = (v: number, m: Moeda) =>
+    `${m.simbolo}\u00A0${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // O IPCA mede só a variação de preços, então o backend devolve o valor na moeda da data inicial.
+  // Aqui ele é convertido para a moeda da data final (o real, na maioria dos casos).
+  const valorConvertido = resultado
+    ? (resultado.valorCorrigido * moedas.final.porReal) / moedas.inicial.porReal
+    : 0;
+
+  const moedaSelecionada = Number(anoInicio) > 0 && Number(mesInicio) > 0
+    ? moedaDaEpoca(Number(anoInicio), Number(mesInicio))
+    : MOEDA_REAL;
+  const notaMoeda = moedas.inicial.porReal !== moedas.final.porReal
+    ? `Valor original em ${moedas.inicial.nome} (${moedas.inicial.simbolo}), convertido para ${moedas.final.nome} (${moedas.final.simbolo}).`
+    : null;
 
   const formulario = (
     <View style={[styles.card, desktop && styles.cardDesktop]}>
-      <Text style={styles.label}>Valor Original (R$)</Text>
+      <Text style={styles.label}>Valor Original ({moedaSelecionada.simbolo})</Text>
       <TextInput
         style={styles.input}
         placeholder="Ex: 1000,00"
@@ -199,7 +231,8 @@ export default function CalculadoraIpcaScreen() {
       {!desktop && resultado && (
         <View style={styles.resultadoBox}>
           <Text style={styles.resultadoRotulo}>Valor Corrigido</Text>
-          <Text style={styles.resultadoGrande}>{moeda(resultado.valorCorrigido)}</Text>
+          <Text style={styles.resultadoGrande}>{formatar(valorConvertido, moedas.final)}</Text>
+          {notaMoeda && <Text style={styles.resultadoLegenda}>{notaMoeda}</Text>}
           <View style={styles.resultadoDivisor} />
           <View style={styles.resultadoLinhaDupla}>
             <Text style={styles.resultadoLinha}>Variação Acumulada</Text>
@@ -220,10 +253,11 @@ export default function CalculadoraIpcaScreen() {
       <Text style={styles.overline}>RESULTADO</Text>
       {resultado ? (
         <>
-          <Text style={styles.resultadoEnorme}>{moeda(resultado.valorCorrigido)}</Text>
+          <Text style={styles.resultadoEnorme}>{formatar(valorConvertido, moedas.final)}</Text>
           <Text style={styles.resultadoLegenda}>
-            Valor corrigido a partir de {moeda(resultado.valorInicial)} pelo IPCA acumulado no período.
+            Valor corrigido a partir de {formatar(resultado.valorInicial, moedas.inicial)} pelo IPCA acumulado no período.
           </Text>
+          {notaMoeda && <Text style={styles.resultadoLegenda}>{notaMoeda}</Text>}
           <View style={styles.metricas}>
             <View style={styles.metrica}>
               <Text style={styles.metricaRotulo}>Variação acumulada</Text>
